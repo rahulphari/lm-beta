@@ -1,0 +1,1843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hubli LM Dispatch Plan</title>
+    
+    <!-- Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Screenshot Library -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <!-- Leaflet Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Transitions */
+        .step-content {
+            display: none;
+            animation: fadeIn 0.4s ease-in-out;
+        }
+        .step-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Custom Scrollbar */
+        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Interactive Cells */
+        .interactive-cell {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .interactive-cell:hover {
+            background-color: #eff6ff; /* blue-50 */
+            font-weight: 600;
+            color: #2563eb; /* blue-600 */
+        }
+        
+        /* Checkbox custom style */
+        .custom-checkbox:checked {
+            background-color: #4f46e5;
+            border-color: #4f46e5;
+        }
+
+        /* Screenshot Specifics */
+        .capture-mode {
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            border: 1px solid #e2e8f0;
+        }
+        
+        /* High Weight Highlight */
+        .high-weight-alert {
+            background-color: #fef9c3 !important; /* yellow-100 */
+            color: #000000 !important; /* Bold Black */
+            font-weight: 800 !important;
+            border: 1px solid #eab308 !important; /* yellow-500 subtle border */
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-40">
+        <div class="container mx-auto px-6 h-16 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 text-white p-2 rounded-lg shadow-lg shadow-blue-600/30">
+                    <i data-lucide="truck" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg text-slate-900 leading-tight">LM Dispatch Planner</h1>
+                    <div class="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Hubli_Budrashingi_H</div>
+                </div>
+            </div>
+            
+            <!-- Stepper Indicators -->
+            <div class="hidden md:flex items-center gap-2">
+                <div class="step-indicator flex items-center gap-2 text-sm text-slate-400" id="step-nav-1">
+                    <span class="w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold">1</span> Upload
+                </div>
+                <div class="w-8 h-px bg-slate-200"></div>
+                <div class="step-indicator flex items-center gap-2 text-sm text-slate-400" id="step-nav-2">
+                    <span class="w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold">2</span> AVTD on Floor
+                </div>
+                <div class="w-8 h-px bg-slate-200"></div>
+                <div class="step-indicator flex items-center gap-2 text-sm text-slate-400" id="step-nav-3">
+                    <span class="w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold">3</span> Map & Fleet
+                </div>
+                <div class="w-8 h-px bg-slate-200"></div>
+                <div class="step-indicator flex items-center gap-2 text-sm text-slate-400" id="step-nav-4">
+                    <span class="w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold">4</span> Target Vehicles
+                </div>
+                <div class="w-8 h-px bg-slate-200"></div>
+                <div class="step-indicator flex items-center gap-2 text-sm text-slate-400" id="step-nav-5">
+                    <span class="w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold">5</span> Load & Plan
+                </div>
+            </div>
+
+            <div class="text-xs text-slate-400">v40.1 Fix</div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow container mx-auto px-6 py-8 relative">
+
+        <!-- ERROR / NOTIFICATION TOAST -->
+        <div id="toast" class="fixed top-20 right-6 z-50 transform transition-all duration-300 translate-x-full opacity-0">
+            <div class="bg-white border-l-4 border-red-500 shadow-xl rounded-r p-4 flex items-start gap-3 max-w-sm">
+                <i data-lucide="alert-circle" class="w-5 h-5 text-red-500 mt-0.5"></i>
+                <div>
+                    <h4 class="font-bold text-sm text-slate-800">System Notification</h4>
+                    <p class="text-sm text-slate-600 mt-1" id="toastMsg">Error message here.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 1: UPLOAD -->
+        <div id="step-1" class="step-content active max-w-2xl mx-auto mt-12">
+            <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 p-8 text-center border border-slate-100">
+                <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-900 mb-2">Upload Query Data</h2>
+                <p class="text-slate-500 mb-8">Upload latest ZIP file from scheduled Query.</p>
+                
+                <div class="relative group cursor-pointer">
+                    <div class="border-2 border-dashed border-slate-300 rounded-xl p-12 transition-all group-hover:border-blue-500 group-hover:bg-blue-50/50">
+                        <input type="file" id="zipInput" accept=".zip" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                        <div class="pointer-events-none">
+                            <span class="bg-white text-slate-600 px-4 py-2 rounded-full shadow-sm border text-sm font-medium group-hover:text-blue-600 group-hover:border-blue-200">Select ZIP File</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="fileStatus" class="mt-6 text-sm min-h-[20px] text-slate-400 transition-all"></div>
+            </div>
+        </div>
+
+        <!-- STEP 2: FLOOR CHECK -->
+        <div id="step-2" class="step-content max-w-5xl mx-auto">
+            <div class="flex justify-between items-end mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900">AVTD on Floor Check</h2>
+                    <p class="text-slate-500">Analysis of shipments currently <strong>Pending</strong> at Hubli.</p>
+                </div>
+                <button onclick="openExclusionModal()" class="text-xs font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-full flex items-center gap-2 transition-colors">
+                    <i data-lucide="alert-triangle" class="w-3 h-3"></i>
+                    View Excluded Data
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- Stat Cards -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 relative overflow-hidden group hover:shadow-md transition-all">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <i data-lucide="package" class="w-16 h-16 text-blue-600"></i>
+                    </div>
+                    <div class="text-sm font-medium text-slate-500 mb-1">Total MWNs</div>
+                    <div class="text-3xl font-bold text-slate-900" id="statPendingCount">0</div>
+                    <div class="text-xs text-green-600 font-medium mt-2 flex items-center">
+                        <i data-lucide="check-circle" class="w-3 h-3 mr-1"></i> Excludes CCF & Future NTD Cases
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 relative overflow-hidden group hover:shadow-md transition-all">
+                    <div class="text-sm font-medium text-slate-500 mb-1">Routes Captured (Raw)</div>
+                    <div class="text-3xl font-bold text-slate-900" id="statPendingRoutes">0</div>
+                    <div class="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
+                        <div class="bg-indigo-500 h-full w-2/3"></div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 relative overflow-hidden group hover:shadow-md transition-all">
+                    <div class="text-sm font-medium text-slate-500 mb-1">Total Weight (Kg)</div>
+                    <div class="text-3xl font-bold text-slate-900" id="statPendingWt">0</div>
+                    <div class="text-xs text-slate-400 mt-2">Kilograms</div>
+                </div>
+            </div>
+
+            <div class="bg-indigo-900 rounded-2xl p-8 flex flex-col md:flex-row items-center justify-between text-white shadow-xl shadow-indigo-900/20">
+                <div class="mb-4 md:mb-0">
+                    <h3 class="text-xl font-bold mb-1">Ready to Map Routes?</h3>
+                    <p class="text-indigo-200 text-sm">System will verify cloud data feeds before proceeding.</p>
+                </div>
+                <button id="step2ProceedBtn" onclick="proceedToMapping()" class="bg-white text-indigo-900 hover:bg-indigo-50 px-6 py-3 rounded-xl font-bold shadow-lg transition-all flex items-center gap-2 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Proceed to Route Mapping <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- STEP 3: ROUTE MAPPING (AUTOMATED) -->
+        <div id="step-3" class="step-content max-w-4xl mx-auto">
+            <div class="flex items-center gap-4 mb-6">
+                <button onclick="goToStep(2)" class="p-2 rounded-full hover:bg-slate-200 transition-colors">
+                    <i data-lucide="arrow-left" class="w-5 h-5 text-slate-600"></i>
+                </button>
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900">Automated Mapping</h2>
+                    <p class="text-slate-500">Data loaded from cloud. Review and handle exceptions.</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg border border-slate-200 p-8">
+                 <!-- Fetching Status (Hidden if pre-check passes) -->
+                 <div id="mapFetchStatus" class="flex flex-col items-center justify-center py-12 hidden">
+                    <i data-lucide="cloud-download" class="w-12 h-12 text-blue-500 animate-bounce mb-4"></i>
+                    <h3 class="text-xl font-bold text-slate-800">Verifying Configuration...</h3>
+                 </div>
+
+                 <!-- Manual Mapping Container (Hidden by default) -->
+                 <div id="manualMappingContainer" class="hidden">
+                     <div class="flex items-center gap-2 mb-4 text-orange-600">
+                        <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                        <h3 class="font-bold text-lg" id="mappingStatusTitle">Unmapped Pincodes Detected</h3>
+                    </div>
+                    <p class="text-sm text-slate-500 mb-4">Some pincodes were not found in the master list. Please map them manually.</p>
+                    
+                    <div class="overflow-x-auto border rounded-lg max-h-80 custom-scroll">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-slate-50 text-slate-600 font-bold sticky top-0">
+                                <tr>
+                                    <th class="p-3 border-b">Pincode</th>
+                                    <th class="p-3 border-b">Location (Auto)</th>
+                                    <th class="p-3 border-b text-right">Shipments</th>
+                                    <th class="p-3 border-b w-1/3">Route Name</th>
+                                </tr>
+                            </thead>
+                            <tbody id="manualMappingBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                    <div class="mt-4 flex justify-between">
+                         <button onclick="ignoreAllUnmapped()" class="text-red-500 hover:text-red-700 font-medium text-sm flex items-center gap-1">
+                            <i data-lucide="x-circle" class="w-4 h-4"></i> Ignore Remaining
+                        </button>
+                        <button onclick="saveManualMapping()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-bold shadow transition-colors">
+                            Save & Proceed
+                        </button>
+                    </div>
+                 </div>
+
+                 <!-- Success Container (Hidden by default) -->
+                 <div id="mappingSuccessContainer" class="hidden text-center py-12">
+                    <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 text-green-600 rounded-full mb-4">
+                        <i data-lucide="check" class="w-8 h-8"></i>
+                    </div>
+                    <h4 class="text-xl font-bold text-slate-800 mb-2">Automated Mapping Complete!</h4>
+                    <p class="text-slate-500 mb-6">Route map, fleet data, and vehicle standards are ready.</p>
+                    <button onclick="goToStep(4)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg transition-transform active:scale-95">
+                        Proceed to Vehicles
+                    </button>
+                 </div>
+            </div>
+        </div>
+
+        <!-- STEP 4: VEHICLE TARGETING -->
+        <div id="step-4" class="step-content max-w-[1400px] mx-auto">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-4">
+                    <button onclick="goToStep(3)" class="p-2 rounded-full hover:bg-slate-200 transition-colors">
+                        <i data-lucide="arrow-left" class="w-5 h-5 text-slate-600"></i>
+                    </button>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-900">Target Incoming Vehicles</h2>
+                        <p class="text-slate-500">Filter the <strong>In-Transit / Arrived</strong> fleet to add to your plan.</p>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="openPasteModal()" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-lg font-medium shadow-sm flex items-center gap-2">
+                        <i data-lucide="clipboard" class="w-4 h-4"></i> Paste List
+                    </button>
+                    <button onclick="confirmPlanGeneration()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-bold shadow-lg transition-transform active:scale-95 flex items-center gap-2">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Generate Load Data
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden flex flex-col h-[70vh]">
+                <!-- Toolbar -->
+                <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                    <div class="relative w-96">
+                        <input type="text" id="vehicleSearchInput" class="w-full border border-slate-300 rounded-lg py-2 px-3 pl-9 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Search by Vehicle No, Trip ID..." onkeyup="handleVehicleSearch()">
+                        <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400"></i>
+                    </div>
+                    <div class="flex gap-2 text-sm">
+                        <span class="text-slate-500">Selected: <strong id="vehicleCountDisplay" class="text-indigo-600">0</strong></span>
+                        <span class="text-slate-300">|</span>
+                        <button onclick="resetSelection()" class="text-slate-500 hover:text-red-600">Reset Selection</button>
+                    </div>
+                </div>
+
+                <!-- Table Header -->
+                <div class="bg-slate-100 text-slate-600 font-bold text-xs uppercase border-b border-slate-200 grid grid-cols-12 gap-2 p-3 pr-5">
+                    <div class="col-span-1 text-center"><input type="checkbox" id="selectAllBtn" class="custom-checkbox rounded w-4 h-4"></div>
+                    <div class="col-span-2">Vehicle No</div>
+                    <div class="col-span-2">Trip ID</div>
+                    <div class="col-span-2">Origin</div>
+                    <div class="col-span-2">Type</div>
+                    <div class="col-span-2">Route Type</div>
+                    <div class="col-span-1 text-right">LM LOAD (Boxes / Kg)</div>
+                </div>
+
+                <!-- Table Body -->
+                <div id="vehicleListContainer" class="overflow-y-auto custom-scroll flex-grow p-0">
+                    <!-- Rows injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 5: LOAD PLANNING & DISPATCH (REVAMPED V38) -->
+        <div id="step-5" class="step-content max-w-[1600px] mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div class="flex items-center gap-4">
+                    <button onclick="goToStep(4)" class="p-2 rounded-full hover:bg-slate-200 transition-colors">
+                        <i data-lucide="arrow-left" class="w-5 h-5 text-slate-600"></i>
+                    </button>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-900">Load Planning & Dispatch</h2>
+                        <div class="flex items-center gap-2 text-sm mt-1 text-slate-500">
+                             Assign fleet to routes based on load recommendations.
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                     <button onclick="toggleFinalView()" id="viewToggleBtn" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium shadow-sm flex items-center gap-2">
+                        <i data-lucide="eye" class="w-4 h-4"></i> View Final Plan
+                    </button>
+                     <button onclick="downloadReport()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition-transform active:scale-95">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Export All
+                    </button>
+                </div>
+            </div>
+
+            <!-- PLANNING VIEW (DRAFT TABLE - V39 VISUALS) -->
+            <div id="planningView" class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+                <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
+                    <h3 class="font-bold text-slate-700 text-sm uppercase tracking-wide">Draft Dispatch Plan</h3>
+                    <div id="fleetStats" class="flex gap-4 text-xs font-mono text-slate-500"></div>
+                </div>
+                
+                <div class="overflow-x-auto custom-scroll">
+                    <table class="w-full text-sm text-left border-collapse">
+                        <thead>
+                            <!-- ROW 1 -->
+                            <tr class="bg-slate-900 text-white text-xs uppercase font-bold tracking-wider">
+                                <th class="p-4 border-r border-slate-700 w-1/4" rowspan="2">Route Cluster</th>
+                                <th class="p-2 text-center bg-blue-700 border-r border-blue-800 w-1/6" colspan="2">B2C</th>
+                                <th class="p-2 text-center bg-purple-700 border-r border-purple-800 w-1/6" colspan="2">B2B</th>
+                                <th class="p-2 text-center bg-orange-700 border-r border-orange-800 w-1/6" colspan="2">Heavy</th>
+                                <th class="p-2 text-center bg-slate-700 border-r border-slate-600 w-1/12" colspan="2">Total</th>
+                                <th class="p-4 text-left bg-slate-800 w-1/3" rowspan="2">Fleet Allocation</th>
+                            </tr>
+                            <!-- ROW 2 -->
+                            <tr class="bg-slate-100 text-slate-600 text-[10px] font-bold uppercase border-b border-slate-300">
+                                <th class="py-2 text-center bg-blue-50 text-blue-800">Cnt</th>
+                                <th class="py-2 text-center bg-blue-50 text-blue-800 border-r border-blue-100">Wt</th>
+                                <th class="py-2 text-center bg-purple-50 text-purple-800">Cnt</th>
+                                <th class="py-2 text-center bg-purple-50 text-purple-800 border-r border-purple-100">Wt</th>
+                                <th class="py-2 text-center bg-orange-50 text-orange-800">Cnt</th>
+                                <th class="py-2 text-center bg-orange-50 text-orange-800 border-r border-orange-100">Wt</th>
+                                <th class="py-2 text-center bg-slate-200 text-slate-800">Cnt</th>
+                                <th class="py-2 text-center bg-slate-200 text-slate-800 border-r border-slate-300">Wt</th>
+                            </tr>
+                        </thead>
+                        <tbody id="draftTableBody" class="divide-y divide-slate-100">
+                            <!-- Injected JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- FINAL VIEW (Hidden by default) -->
+            <div id="finalView" class="hidden">
+                 <div id="capture-target" class="bg-white p-8 rounded-none md:rounded-xl shadow-xl border border-slate-200">
+                    <div class="flex justify-between items-end mb-6 border-b-2 border-slate-800 pb-4">
+                        <div>
+                            <div class="text-2xl font-extrabold text-slate-900 tracking-tight uppercase">Hubli Dispatch Plan</div>
+                            <div class="text-sm text-slate-500 font-medium mt-1">LM Manager: vinay.a@delhivery.com</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Dispatch Plan Date</div>
+                            <div class="text-lg font-bold text-indigo-600" id="reportDate">--</div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-900 text-white text-xs uppercase font-bold tracking-wider">
+                                    <th class="p-4 rounded-tl-lg w-1/4">Route & Vehicles</th>
+                                    <th class="p-2 text-center bg-blue-700 border-l border-blue-800 w-1/6" colspan="2">B2C</th>
+                                    <th class="p-2 text-center bg-purple-700 border-l border-purple-800 w-1/6" colspan="2">B2B</th>
+                                    <th class="p-2 text-center bg-orange-700 border-l border-orange-800 w-1/6" colspan="2">Heavy</th>
+                                    <th class="p-2 text-center bg-slate-700 border-l border-slate-600 rounded-tr-lg w-1/6" colspan="2">TOTAL</th>
+                                </tr>
+                                <tr class="bg-slate-100 text-slate-600 text-[10px] font-bold uppercase border-b border-slate-300">
+                                    <th class="p-2 pl-4">Allocation Detail</th>
+                                    <th class="py-2 text-center bg-blue-50 text-blue-800">Boxes</th>
+                                    <th class="py-2 text-center bg-blue-50 text-blue-800 border-r border-blue-100">Wt (Kg)</th>
+                                    <th class="py-2 text-center bg-purple-50 text-purple-800">Boxes</th>
+                                    <th class="py-2 text-center bg-purple-50 text-purple-800 border-r border-purple-100">Wt (Kg)</th>
+                                    <th class="py-2 text-center bg-orange-50 text-orange-800">Boxes</th>
+                                    <th class="py-2 text-center bg-orange-50 text-orange-800 border-r border-orange-100">Wt (Kg)</th>
+                                    <th class="py-2 text-center bg-slate-200 text-slate-800">Boxes</th>
+                                    <th class="py-2 text-center bg-slate-200 text-slate-800">Total Wt</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboardBody" class="divide-y divide-slate-200"></tbody>
+                            <tfoot class="bg-slate-800 text-white font-bold text-sm">
+                                <tr id="dashboardFooter"></tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                     <!-- CPK Table -->
+                    <div class="mt-8">
+                        <h4 class="font-bold text-slate-800 mb-2 uppercase text-xs tracking-wider border-b border-slate-200 pb-1">Cost & Utilization Summary</h4>
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-slate-50 text-slate-500">
+                                <tr>
+                                    <th class="p-2">Vehicle</th>
+                                    <th class="p-2">Route</th>
+                                    <th class="p-2 text-right">Load (Kg)</th>
+                                    <th class="p-2 text-right">Contract</th>
+                                    <th class="p-2 text-right">Hrs/Runs</th>
+                                    <th class="p-2 text-right">Adj. Cost</th>
+                                    <th class="p-2 text-right">CPK</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cpkTableBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- NEW: FLEET PICKER MODAL -->
+    <div id="fleetPickerModal" class="fixed inset-0 z-[100] hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeFleetPicker()"></div>
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl bg-white rounded-xl shadow-2xl flex flex-col h-[75vh] animate-fadeIn">
+            <div class="bg-indigo-700 p-5 rounded-t-xl text-white flex justify-between items-center">
+                <h3 class="font-bold text-xl"><i data-lucide="truck" class="w-5 h-5 inline mr-2"></i> Select Fleet Vehicle</h3>
+                <button onclick="closeFleetPicker()" class="text-indigo-200 hover:text-white"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            
+            <div class="p-4 border-b border-slate-200 bg-slate-50">
+                <input type="text" id="fleetPickerSearch" class="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Search Vehicle No, Transporter, Type..." onkeyup="filterFleetPicker()">
+            </div>
+            
+            <div class="flex-grow overflow-y-auto custom-scroll p-0">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-white sticky top-0 shadow-sm text-xs uppercase text-slate-500 z-10">
+                        <tr>
+                            <th class="px-6 py-3 border-b">Vehicle Info</th>
+                            <th class="px-6 py-3 border-b">Type / Size</th>
+                            <th class="px-6 py-3 border-b">Transporter</th>
+                            <th class="px-6 py-3 border-b text-right">Cost (Day)</th>
+                            <th class="px-6 py-3 border-b w-24"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="fleetPickerBody" class="divide-y divide-slate-100">
+                        <!-- Injected -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: DATA FEED STATUS MODAL -->
+    <div id="dataFeedModal" class="fixed inset-0 z-[100] hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeDataFeedModal()"></div>
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-xl shadow-2xl p-6 animate-fadeIn">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="font-bold text-lg text-slate-800">System Data Check</h3>
+                <button onclick="closeDataFeedModal()"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button>
+            </div>
+            
+            <div class="space-y-4 mb-6">
+                <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <div id="statusIconPins" class="p-1 rounded-full"><i data-lucide="loader" class="w-4 h-4 text-slate-400"></i></div>
+                        <div>
+                            <div class="text-sm font-bold text-slate-700">Route Map</div>
+                            <div class="text-xs text-slate-400">Pincode Database</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-mono font-bold text-slate-800" id="statusCountPins">0</div>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <div id="statusIconFleet" class="p-1 rounded-full"><i data-lucide="loader" class="w-4 h-4 text-slate-400"></i></div>
+                        <div>
+                            <div class="text-sm font-bold text-slate-700">Fleet Master</div>
+                            <div class="text-xs text-slate-400">Contract Vehicles</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-mono font-bold text-slate-800" id="statusCountFleet">0</div>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <div id="statusIconCap" class="p-1 rounded-full"><i data-lucide="loader" class="w-4 h-4 text-slate-400"></i></div>
+                        <div>
+                            <div class="text-sm font-bold text-slate-700">Standards</div>
+                            <div class="text-xs text-slate-400">Vehicle Capacities</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-mono font-bold text-slate-800" id="statusCountCap">0</div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-3" id="feedActionButtons">
+                <button onclick="initDataFeeds()" class="flex-1 py-2 bg-white border border-slate-300 text-slate-600 rounded-lg font-bold text-sm hover:bg-slate-50">Retry Fetch</button>
+                <button disabled id="feedProceedBtn" onclick="goToStep(3)" class="flex-1 py-2 bg-slate-300 text-white rounded-lg font-bold text-sm cursor-not-allowed">Proceed</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: DATA FEED VIEWER MODAL -->
+    <div id="dataViewerModal" class="fixed inset-0 z-[110] hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeDataViewer()"></div>
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl bg-white rounded-xl shadow-2xl flex flex-col h-[80vh] animate-fadeIn">
+            <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-xl">
+                <h3 class="font-bold text-lg text-slate-800" id="viewerTitle">Data View</h3>
+                <button onclick="closeDataViewer()"><i data-lucide="x" class="w-6 h-6 text-slate-400 hover:text-slate-600"></i></button>
+            </div>
+            <div class="flex-grow overflow-auto p-0">
+                <table class="w-full text-sm text-left border-collapse">
+                    <thead class="bg-white sticky top-0 shadow-sm text-xs uppercase text-slate-500 z-10" id="viewerHeader"></thead>
+                    <tbody id="viewerBody" class="divide-y divide-slate-100 text-xs"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Assignment Modal (UPDATED V40) -->
+    <div id="loadAssignmentModal" class="fixed inset-0 z-[90] hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeLoadAssignment()"></div>
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl bg-white rounded-xl shadow-2xl flex flex-col h-[90vh] animate-fadeIn">
+            <div class="bg-indigo-700 p-5 rounded-t-xl text-white flex justify-between">
+                <div><h3 class="font-bold text-xl" id="lamTitle">Loading Vehicle...</h3><div class="text-xs text-indigo-200 mt-1" id="lamSubtitle">Route: ...</div></div>
+                <button onclick="closeLoadAssignment()" class="text-indigo-200 hover:text-white"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            
+            <div class="flex-grow flex overflow-hidden">
+                <!-- LEFT: SMART BULK LOAD & SETTINGS -->
+                <div class="w-5/12 bg-slate-50 p-5 border-r border-slate-200 overflow-y-auto">
+                    
+                    <!-- CAPACITY METER -->
+                    <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm mb-6">
+                         <div class="flex justify-between items-center mb-2">
+                             <span class="text-xs font-bold text-slate-500 uppercase">Load Utilization</span>
+                             <span class="text-sm font-bold text-slate-800" id="lamUtilText">0%</span>
+                         </div>
+                         <div class="w-full bg-slate-200 rounded-full h-3 mb-1 overflow-hidden relative">
+                             <!-- Markers for 100% -->
+                             <div class="absolute right-[16.6%] top-0 bottom-0 w-0.5 bg-white z-10" title="100% Capacity"></div>
+                             <div class="bg-green-500 h-3 rounded-full transition-all duration-300" id="lamUtilBar" style="width: 0%"></div>
+                         </div>
+                         <div class="flex justify-between text-[10px] text-slate-400">
+                             <span>0 kg</span>
+                             <span>Max: <span id="lamMaxCap">0</span> kg (120%)</span>
+                         </div>
+                         <div id="lamOverloadMsg" class="hidden mt-2 p-2 bg-red-50 text-red-700 text-xs rounded border border-red-100 flex items-center gap-2">
+                             <i data-lucide="alert-triangle" class="w-3 h-3"></i> <span>Capacity Exceeded! Plan Second Run?</span>
+                         </div>
+                    </div>
+
+                    <!-- SMART LOAD GROUPS -->
+                    <div class="mb-6">
+                        <h4 class="text-xs font-bold text-slate-500 uppercase mb-3 border-b pb-1">Smart Load Groups</h4>
+                        <div class="space-y-2 overflow-y-auto max-h-[30vh] custom-scroll pr-1" id="lamBulkGroups">
+                             <!-- Groups Injected JS -->
+                        </div>
+                    </div>
+
+                    <!-- SETTINGS -->
+                    <div class="border-t border-slate-200 pt-4">
+                        <h4 class="text-xs font-bold text-slate-500 uppercase mb-2">Cost & Optimization</h4>
+                        
+                        <div id="cartingSettings" class="hidden mb-3 p-2 bg-yellow-50 rounded border border-yellow-100">
+                            <label class="block text-xs text-yellow-800 font-bold mb-1">Hours Used: <span id="usedHrsVal" class="text-slate-800">0</span> / <span id="contractHrsVal">--</span></label>
+                            <input type="range" id="lamHoursSlider" class="w-full h-2 bg-yellow-200 rounded-lg appearance-none cursor-pointer" min="1" max="24" step="0.5" oninput="updateLamCost()">
+                        </div>
+
+                        <label id="lblSecondRun" class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer p-2 hover:bg-slate-100 rounded transition-colors">
+                            <input type="checkbox" id="lamSecondRun" class="custom-checkbox rounded w-4 h-4 text-indigo-600" onchange="updateLamCost()">
+                            <span>Plan Second Run?</span>
+                            <span class="ml-auto text-[9px] text-green-600 bg-green-50 px-1.5 rounded hidden" id="run2Badge">Recommended</span>
+                        </label>
+                    </div>
+
+                    <!-- METRICS -->
+                    <div class="mt-4 pt-4 border-t border-slate-200">
+                        <div class="flex justify-between items-end">
+                            <div><div class="text-[10px] text-slate-400 uppercase">Current Load</div><div class="text-lg font-bold text-slate-800" id="lamCurLoad">0 kg</div></div>
+                            <div class="text-right"><div class="text-[10px] text-slate-400 uppercase">Proj. CPK</div><div class="text-2xl font-bold text-indigo-600" id="lamCpk">0.00</div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: INDIVIDUAL LIST -->
+                <div class="w-7/12 flex flex-col bg-white">
+                    <div class="p-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 flex justify-between items-center shadow-sm">
+                        <span>Individual Shipments</span>
+                        <span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full" id="lamSelectionCount">0 selected</span>
+                    </div>
+                    <div class="flex-grow overflow-y-auto custom-scroll p-0">
+                        <table class="w-full text-xs text-left">
+                            <thead class="sticky top-0 bg-white shadow-sm text-slate-500 z-10">
+                                <tr>
+                                    <th class="p-2 w-8 border-b"></th>
+                                    <th class="p-2 border-b">Waybill</th>
+                                    <th class="p-2 border-b">Client</th>
+                                    <th class="p-2 border-b">Pin</th>
+                                    <th class="p-2 text-right border-b">Wt (Kg)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lamTableBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                    <div class="p-4 border-t border-slate-200 flex justify-end gap-3 bg-slate-50">
+                        <button onclick="clearVehicleLoad()" class="text-red-500 text-sm font-medium hover:underline px-4">Clear All</button>
+                        <button onclick="closeLoadAssignment()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-2 rounded-lg font-bold shadow-md transform active:scale-95 transition-all">Save & Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Other Modals (Exclusion, Validation, Paste, Plan Confirm, Unassigned) ... Same as before ... -->
+    <div id="exclusionModal" class="fixed inset-0 z-[60] hidden"><div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="closeExclusionModal()"></div><div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-xl shadow-2xl p-6 animate-fadeIn"><div class="flex items-center gap-3 mb-4 text-amber-600"><i data-lucide="alert-triangle" class="w-6 h-6"></i><h3 class="font-bold text-lg text-slate-900">Excluded Data</h3></div><div class="space-y-3"><div class="flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-100"><span class="font-medium text-slate-700">Future NTD</span><span class="font-bold text-red-600 text-lg" id="statExcludedFuture">0</span></div><div class="flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-100"><span class="font-medium text-slate-700">CCF Status</span><span class="font-bold text-red-600 text-lg" id="statExcludedCCF">0</span></div></div><button onclick="closeExclusionModal()" class="mt-6 w-full py-2 bg-slate-800 text-white rounded-lg font-medium hover:bg-slate-700">Dismiss</button></div></div>
+    <div id="vehicleValidationModal" class="fixed inset-0 z-[65] hidden"><div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div><div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-xl shadow-2xl p-0 animate-fadeIn overflow-hidden"><div class="bg-indigo-600 p-4 text-white flex items-center justify-between"><h3 class="font-bold text-lg flex items-center gap-2"><i data-lucide="clipboard-check" class="w-5 h-5"></i> Input Confirmation</h3></div><div class="p-6"><p class="text-sm text-slate-600 mb-4">You pasted <strong id="valTotal" class="text-slate-900">0</strong> vehicle numbers.</p><div class="space-y-3 mb-6"><div class="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200"><span class="font-medium text-slate-700">Valid</span><span class="font-bold text-green-700 text-lg" id="valValid">0</span></div><div class="flex flex-col p-3 bg-red-50 rounded-lg border border-red-200"><div class="flex justify-between items-center"><span class="font-medium text-slate-700">Invalid</span><span class="font-bold text-red-700 text-lg" id="valInvalid">0</span></div><div id="valInvalidList" class="mt-2 text-xs text-red-600 font-mono hidden border-t border-red-200 pt-2"></div></div></div><div class="flex gap-3"><button onclick="closeValidationModal()" class="flex-1 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50">Back</button><button onclick="applyPastedSelection()" class="flex-1 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700">Proceed</button></div></div></div></div>
+    <div id="pasteVehicleModal" class="fixed inset-0 z-[65] hidden"><div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div><div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white rounded-xl shadow-2xl p-0 animate-fadeIn overflow-hidden"><div class="bg-slate-800 p-4 text-white flex justify-between items-center"><h3 class="font-bold text-lg flex items-center gap-2"><i data-lucide="clipboard" class="w-5 h-5"></i> Paste List</h3><button onclick="closePasteModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button></div><div class="p-6"><textarea id="vehiclePasteArea" class="w-full h-48 border border-slate-300 rounded-lg p-3 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none resize-none bg-slate-50" placeholder="KA51..."></textarea><div class="flex justify-end mt-4"><button onclick="processPasteInput()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-bold shadow transition-colors">Validate</button></div></div></div></div>
+    <div id="planConfirmationModal" class="fixed inset-0 z-[75] hidden"><div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div><div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white rounded-xl shadow-2xl p-6 text-center animate-fadeIn"><div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="calendar-check" class="w-6 h-6"></i></div><h3 class="font-bold text-lg text-slate-900 mb-2">Confirm Date</h3><div class="mb-4 text-left"><label class="block text-xs font-bold text-slate-600 mb-1">Dispatch Date</label><input type="date" id="confirmDateInput" class="w-full border border-slate-300 rounded-lg p-2 text-sm"></div><div class="flex gap-3"><button onclick="closePlanConfirmation()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-lg font-medium hover:bg-slate-200">Cancel</button><button onclick="finalizePlanGeneration()" class="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">Generate Plan</button></div></div></div>
+    <div id="unassignedPromptModal" class="fixed inset-0 z-[80] hidden"><div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div><div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white rounded-xl shadow-2xl p-6 text-center animate-fadeIn"><div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="help-circle" class="w-6 h-6"></i></div><h3 class="font-bold text-lg text-slate-900 mb-2">Unassigned Shipments</h3><p class="text-sm text-slate-600 mb-6"><strong id="unassignedCountDisplay">0</strong> shipments do not have a route assigned.</p><div class="flex gap-3"><button onclick="proceedToDashboard()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-lg font-medium hover:bg-slate-200">No, Skip</button><button onclick="openUnassignedManager()" class="flex-1 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700">Yes, Assign</button></div></div></div>
+    <div id="assignmentManagerModal" class="fixed inset-0 z-[85] hidden"><div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div><div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl bg-white rounded-xl shadow-2xl flex flex-col h-[85vh] animate-fadeIn"><div class="p-6 border-b border-slate-100 flex justify-between items-center"><h3 class="font-bold text-xl text-slate-800">Assign Routes</h3><button onclick="closeAssignmentManager()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-6 h-6"></i></button></div><div class="flex-grow overflow-hidden flex flex-col md:flex-row"><div class="flex-grow overflow-y-auto custom-scroll p-0 relative"><table class="w-full text-sm text-left"><thead class="bg-slate-50 text-xs uppercase text-slate-500 sticky top-0 z-10 shadow-sm"><tr><th class="p-4 w-10"><input type="checkbox" id="selectAllUnassigned" class="custom-checkbox rounded"></th><th class="p-4">Waybill</th><th class="p-4">Pin Code</th><th class="p-4 text-right">Details</th></tr></thead><tbody id="unassignedTableBody" class="divide-y divide-slate-100"></tbody></table></div></div><div class="p-4 border-t border-slate-200 bg-slate-50 rounded-b-xl flex flex-col md:flex-row gap-4 items-center justify-between"><div class="text-sm text-slate-500 font-medium"><span id="selectedCountDisplay">0</span> items selected</div><div class="flex items-center gap-3 w-full md:w-auto"><select id="routeSelect" class="border border-slate-300 rounded-lg p-2.5 text-sm w-full md:w-64 focus:ring-2 focus:ring-indigo-500 outline-none" onchange="checkNewRouteOption()"></select><input type="text" id="newRouteInput" class="hidden border border-slate-300 rounded-lg p-2.5 text-sm w-48 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Enter Route Name"><button onclick="applyManualAssignment()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-medium shadow-md transition-all active:scale-95 whitespace-nowrap">Assign Route</button></div></div></div></div>
+
+    <!-- Details Modal (Generic) -->
+    <div id="detailsModal" class="fixed inset-0 z-[60] hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl bg-white rounded-2xl shadow-2xl p-0 flex flex-col max-h-[85vh] animate-fadeIn overflow-hidden">
+            <div class="bg-gradient-to-r from-indigo-600 to-purple-700 p-6 flex justify-between items-center text-white">
+                <div>
+                    <h3 class="font-bold text-2xl" id="modalTitle">Details</h3>
+                    <div class="text-sm text-indigo-100 mt-1 opacity-90" id="modalSubtitle">--</div>
+                </div>
+                <button onclick="closeModal()" class="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors backdrop-blur-sm">
+                    <i data-lucide="x" class="w-5 h-5 text-white"></i>
+                </button>
+            </div>
+            <div class="overflow-y-auto custom-scroll p-0 flex-grow bg-slate-50">
+                <table class="w-full text-sm text-left border-collapse">
+                    <thead class="bg-white text-xs uppercase text-slate-500 sticky top-0 shadow-sm z-10">
+                        <tr>
+                            <th class="px-6 py-4 border-b">Waybill Number</th>
+                            <th class="px-6 py-4 border-b">Client</th>
+                            <th class="px-6 py-4 border-b">Pincode</th>
+                            <th class="px-6 py-4 border-b text-right">Weight (Kg)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modalBody" class="divide-y divide-slate-100 bg-white"></tbody>
+                </table>
+            </div>
+            <div class="p-4 border-t border-slate-200 bg-white flex justify-between items-center rounded-b-2xl">
+                <div class="text-xs text-slate-400">Showing all records.</div>
+                <div class="flex items-center gap-4">
+                    <div class="text-sm font-bold text-slate-700">Total Wt: <span id="modalTotalWt" class="text-indigo-600 text-lg">0</span> Kg</div>
+                    <button onclick="closeModal()" class="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- CONSTANTS ---
+        const SHEET_URLS = {
+            PIN_MAP: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRMI-CLNFL-JwsnysMqVd0CTpY-iVcZox5LPZ_Bslp9gi_bL5107gulTOljhAfaWcbBc_Sxh9uBaQ8E/pub?gid=0&single=true&output=csv',
+            VEHICLE_CAPS: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRMI-CLNFL-JwsnysMqVd0CTpY-iVcZox5LPZ_Bslp9gi_bL5107gulTOljhAfaWcbBc_Sxh9uBaQ8E/pub?gid=1689545468&single=true&output=csv',
+            FLEET: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRMI-CLNFL-JwsnysMqVd0CTpY-iVcZox5LPZ_Bslp9gi_bL5107gulTOljhAfaWcbBc_Sxh9uBaQ8E/pub?gid=590311373&single=true&output=csv'
+        };
+
+        const DEFAULT_VEHICLE_CAPACITY = [
+             { type: 'mini truck (ace)', volume: 150, weight: 710 },
+             { type: 'pickup truck', volume: 228, weight: 1000 },
+             { type: 'truck (407)', volume: 360, weight: 2000 }
+        ];
+
+        // --- STATE ---
+        let GLOBAL_DATA = [];
+        let GLOBAL_PENDING_DATA = []; 
+        let GLOBAL_TRANSIT_DATA = []; 
+        let GLOBAL_DISPLAY_DATA = [];
+        let GLOBAL_PIN_MAP = {}; 
+        let GLOBAL_DETECTED_ROUTES = new Set();
+        let VEHICLE_STANDARDS = [];
+        let FLEET_MASTER = [];
+        let DISPATCH_PLAN = {}; 
+        let CURRENT_STEP = 1;
+        let DATA_FEED_STATUS = { pins: false, fleet: false, cap: false };
+        let SELECTED_PLAN_DATE = "";
+        let CURRENT_SORT = { key: 'totalCnt', order: 'desc' };
+        let GLOBAL_SUMMARY_MAP = {};
+        let GLOBAL_VEHICLE_MAP = {};
+        let GLOBAL_ROUTE_VEHICLE_MAP = {};
+        let UNIQUE_PINCODES = new Set();
+        let STATS_EXCLUSIONS = { future: 0, ccf: 0 };
+        let WEATHER_ALERTS = [];
+        let currentModalTarget = null;
+        let CURRENT_ROUTE_TARGET = "";
+
+        // --- INIT ---
+        lucide.createIcons();
+        document.getElementById('zipInput').addEventListener('change', handleZipUpload);
+        document.getElementById('selectAllBtn').addEventListener('change', (e) => {
+            document.querySelectorAll('.vehicle-checkbox').forEach(cb => cb.checked = e.target.checked);
+            updateVehicleSelectionCount();
+        });
+        document.getElementById('selectAllUnassigned').addEventListener('change', (e) => {
+            document.querySelectorAll('.unassigned-checkbox').forEach(cb => cb.checked = e.target.checked);
+            updateSelectedCount();
+        });
+
+        // --- DATA FETCHING (Robust) ---
+        async function fetchCsv(url) {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("HTTP " + response.status);
+            const text = await response.text();
+            return Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+        }
+
+        async function initDataFeeds() {
+            // Reset
+            DATA_FEED_STATUS = { pins: false, fleet: false, cap: false };
+            
+            // 1. Pincodes (Primary)
+            try {
+                const pinData = await fetchCsv(SHEET_URLS.PIN_MAP);
+                GLOBAL_PIN_MAP = {};
+                pinData.forEach(r => {
+                    const p = r['Pincode'] || r['pincode'] || Object.values(r)[0];
+                    const rt = r['Route Name'] || r['Route'] || Object.values(r)[1];
+                    if(p && rt) {
+                        GLOBAL_PIN_MAP[p.toString().trim()] = rt.toString().trim();
+                        GLOBAL_DETECTED_ROUTES.add(rt.toString().trim());
+                    }
+                });
+                DATA_FEED_STATUS.pins = Object.keys(GLOBAL_PIN_MAP).length > 0;
+            } catch (e) { console.error("Pin Fetch Fail", e); }
+
+            // 2. Capacities (Fallback if fail)
+            try {
+                const capData = await fetchCsv(SHEET_URLS.VEHICLE_CAPS);
+                VEHICLE_STANDARDS = capData.map(r => ({
+                    type: r['Type']?.trim(),
+                    vol: parseFloat(r['Vol (CFT)']) || 0,
+                    wt: parseFloat(r['Wt (Kg)']) || 0
+                }));
+                DATA_FEED_STATUS.cap = VEHICLE_STANDARDS.length > 0;
+            } catch(e) {
+                 VEHICLE_STANDARDS = DEFAULT_VEHICLE_CAPACITY.map(r => ({ type: r.type, vol: r.volume, wt: r.weight }));
+                 DATA_FEED_STATUS.cap = true; 
+            }
+
+            // 3. Fleet
+            try {
+                const fleetData = await fetchCsv(SHEET_URLS.FLEET);
+                FLEET_MASTER = fleetData.map(r => ({
+                    transporter: r['Transporter'],
+                    no: r['Vehicle No']?.trim().toUpperCase(),
+                    size: r['Vehicle Size'],
+                    hours: parseFloat(r['Hours']) || 0,
+                    cost: parseFloat(r['Contract Cost']) || 0,
+                    type: r['Type']?.trim(), 
+                    acpd: parseFloat(r['ACPD']) || 0
+                })).filter(v => v.no);
+                DATA_FEED_STATUS.fleet = FLEET_MASTER.length > 0;
+            } catch (e) { console.error("Fleet Fetch Fail", e); }
+            
+            // Update UI
+            updateFeedStatusUI();
+        }
+        
+        function updateFeedStatusUI() {
+            const pinIcon = document.getElementById('statusIconPins');
+            const fleetIcon = document.getElementById('statusIconFleet');
+            const capIcon = document.getElementById('statusIconCap');
+            const proceedBtn = document.getElementById('step2ProceedBtn');
+
+            if(DATA_FEED_STATUS.pins) {
+                pinIcon.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4 text-green-600"></i>';
+                document.getElementById('statusCountPins').textContent = Object.keys(GLOBAL_PIN_MAP).length + " mapped";
+            } else {
+                pinIcon.innerHTML = '<i data-lucide="x-circle" class="w-4 h-4 text-red-600"></i>';
+                document.getElementById('statusCountPins').textContent = "Failed";
+            }
+
+            if(DATA_FEED_STATUS.fleet) {
+                fleetIcon.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4 text-green-600"></i>';
+                document.getElementById('statusCountFleet').textContent = FLEET_MASTER.length + " vehicles";
+            } else {
+                fleetIcon.innerHTML = '<i data-lucide="x-circle" class="w-4 h-4 text-red-600"></i>';
+                 document.getElementById('statusCountFleet').textContent = "Failed";
+            }
+
+            if(DATA_FEED_STATUS.cap) {
+                capIcon.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4 text-green-600"></i>';
+                document.getElementById('statusCountCap').textContent = VEHICLE_STANDARDS.length + " types";
+            }
+            
+            // Enable/Disable Proceed
+            if (DATA_FEED_STATUS.pins && DATA_FEED_STATUS.fleet) {
+                proceedBtn.disabled = false;
+                proceedBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                proceedBtn.disabled = true;
+                proceedBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            lucide.createIcons();
+        }
+        
+        initDataFeeds();
+        
+        function proceedToMapping() {
+             if (DATA_FEED_STATUS.pins && DATA_FEED_STATUS.fleet) {
+                 goToStep(3);
+             } else {
+                 alert("Critical data feeds (Map/Fleet) missing. Please check connection and retry.");
+             }
+        }
+
+        // --- VIEWER MODAL ---
+        function viewFeedData(type) {
+             const title = document.getElementById('viewerTitle');
+             const header = document.getElementById('viewerHeader');
+             const body = document.getElementById('viewerBody');
+             
+             header.innerHTML = '';
+             body.innerHTML = '';
+             
+             let data = [];
+             let cols = [];
+             
+             if (type === 'pins') {
+                 title.textContent = "Route Map (Pincodes)";
+                 cols = ['Pincode', 'Route Name'];
+                 // Convert map to array for display
+                 data = Object.entries(GLOBAL_PIN_MAP).map(([k,v]) => ({'Pincode': k, 'Route Name': v})).slice(0, 500); // Limit display
+             } else if (type === 'fleet') {
+                 title.textContent = "Fleet Master";
+                 cols = ['Vehicle No', 'Type', 'Size', 'Cost'];
+                 data = FLEET_MASTER.map(f => ({'Vehicle No': f.no, 'Type': f.type, 'Size': f.size, 'Cost': f.cost}));
+             } else if (type === 'cap') {
+                 title.textContent = "Vehicle Standards";
+                 cols = ['Type', 'Wt (Kg)', 'Vol (CFT)'];
+                 data = VEHICLE_STANDARDS.map(s => ({'Type': s.type, 'Wt (Kg)': s.wt, 'Vol (CFT)': s.vol}));
+             }
+             
+             // Render
+             let headHtml = '<tr>';
+             cols.forEach(c => headHtml += `<th class="px-6 py-3 border-b">${c}</th>`);
+             headHtml += '</tr>';
+             header.innerHTML = headHtml;
+             
+             data.forEach(row => {
+                 let rowHtml = '<tr class="border-b hover:bg-slate-50">';
+                 cols.forEach(c => rowHtml += `<td class="px-6 py-3 text-slate-600 font-mono">${row[c] || '-'}</td>`);
+                 rowHtml += '</tr>';
+                 body.innerHTML += rowHtml;
+             });
+             
+             document.getElementById('dataViewerModal').classList.remove('hidden');
+        }
+        function closeDataViewer() { document.getElementById('dataViewerModal').classList.add('hidden'); }
+
+        // --- NAVIGATION ---
+        function goToStep(step) {
+            document.querySelector('.step-content.active').classList.remove('active');
+            document.getElementById(`step-${step}`).classList.add('active');
+            updateIndicators(step);
+            if(step === 3) checkRouteMapping();
+            if(step === 5) initLoadPlanning();
+            CURRENT_STEP = step;
+            window.scrollTo(0,0);
+        }
+        function updateIndicators(step) {
+            for(let i=1; i<=5; i++) {
+                const el = document.getElementById(`step-nav-${i}`);
+                if(i===step) { el.classList.remove('text-slate-400'); el.classList.add('text-blue-600'); }
+                else { el.classList.add('text-slate-400'); el.classList.remove('text-blue-600'); }
+            }
+        }
+        function safeSetText(id, txt) { const el = document.getElementById(id); if(el) el.textContent = txt; }
+        
+        // --- ZIP UPLOAD ---
+        async function handleZipUpload(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+            document.getElementById('fileStatus').innerHTML = `<span class="flex items-center justify-center gap-2 text-blue-600"><i data-lucide="loader" class="animate-spin w-4 h-4"></i> Parsing...</span>`;
+            lucide.createIcons();
+            try {
+                const zip = new JSZip();
+                const contents = await zip.loadAsync(file);
+                let csvName = null;
+                for (const filename in contents.files) {
+                     if (filename.toLowerCase().endsWith('.csv')) { 
+                         csvName = filename; 
+                         break; 
+                     } 
+                }
+                
+                if(!csvName) { 
+                    alert("No CSV in ZIP"); 
+                    document.getElementById('fileStatus').innerHTML = "";
+                    return; 
+                }
+                
+                const csvText = await contents.files[csvName].async("string");
+                Papa.parse(csvText, { header: true, skipEmptyLines: true, complete: (res) => { processUploadData(res.data); document.getElementById('fileStatus').innerHTML = ""; goToStep(2); } });
+            } catch (error) { document.getElementById('fileStatus').innerHTML = `<span class="text-red-500">Error: ${error.message}</span>`; }
+        }
+
+        function processUploadData(data) {
+            GLOBAL_DATA = [];
+            GLOBAL_PENDING_DATA = []; 
+            GLOBAL_TRANSIT_DATA = []; 
+            let uniquePins = new Set();
+            
+            data.forEach(row => {
+                 const cn = (row['cn']||'').toLowerCase();
+                 const dest = (row['trip_destination_center']||'').toLowerCase();
+                 const status = (row['cs_ss']||'').toLowerCase();
+                 const ccf = (row['Final CCF']||'').toLowerCase();
+                 
+                 if (row['Master_waybill']) row['Master_waybill'] = row['Master_waybill'].toString().replace(/\D/g, '');
+
+                 const isFloor = cn.includes('hubli') && cn.includes('budarshingi') && status === 'pending';
+                 const isIncoming = dest.includes('hubli') && dest.includes('budarshingi') && cn.includes('hubli') && cn.includes('budarshingi');
+                 
+                 if( (isFloor || isIncoming) && !ccf.includes('future') && ccf !== 'ccf') {
+                    row['source_type'] = isFloor ? 'Floor' : 'Incoming';
+                    GLOBAL_DATA.push(row);
+                    if(isFloor) GLOBAL_PENDING_DATA.push(row);
+                    if(isIncoming) GLOBAL_TRANSIT_DATA.push(row);
+                    
+                    if(row['pin']) uniquePins.add(row['pin'].trim());
+                 }
+            });
+            UNIQUE_PINS = uniquePins; 
+            
+            // Update Stats
+            const totalWt = GLOBAL_PENDING_DATA.reduce((s,r) => s + (parseFloat(r['int_wt_iwt'])||0), 0);
+            safeSetText('statPendingCount', GLOBAL_PENDING_DATA.length);
+            safeSetText('statPendingWt', totalWt.toFixed(0));
+            
+            // IMPORTANT: Init vehicles here
+            initVehicleData(); 
+        }
+
+        // --- STEP 3: MAPPING ---
+        function checkRouteMapping() {
+            document.getElementById('mapFetchStatus').classList.add('hidden'); 
+
+            const missing = [];
+            
+            // FIX: Need to check GLOBAL_DATA pins against GLOBAL_PIN_MAP
+            // Calculate shipments for unmapped pins
+            const unmappedStats = {};
+            
+            GLOBAL_DATA.forEach(row => {
+                const p = (row['pin']||'').trim();
+                if (p && !GLOBAL_PIN_MAP[p]) {
+                    if(!unmappedStats[p]) unmappedStats[p] = { count: 0, wt: 0 };
+                    unmappedStats[p].count++;
+                    unmappedStats[p].wt += parseFloat(row['int_wt_iwt']) || 0;
+                }
+            });
+            
+            const missingKeys = Object.keys(unmappedStats);
+
+            if(missingKeys.length === 0) {
+                document.getElementById('manualMappingContainer').classList.add('hidden');
+                document.getElementById('mappingSuccessContainer').classList.remove('hidden');
+                safeSetText('mappingStatusTitle', 'Mapping Verified');
+            } else {
+                document.getElementById('mappingSuccessContainer').classList.add('hidden');
+                document.getElementById('manualMappingContainer').classList.remove('hidden');
+                safeSetText('mappingStatusTitle', `${missingKeys.length} Unmapped Pincodes`);
+                
+                const tbody = document.getElementById('manualMappingBody');
+                tbody.innerHTML = '';
+                let opts = `<option value="">Select...</option>`;
+                GLOBAL_DETECTED_ROUTES.forEach(r => opts += `<option value="${r}">${r}</option>`);
+                opts += `<option value="NA">NA (Ignore)</option>`;
+
+                missingKeys.forEach(pin => {
+                    const stats = unmappedStats[pin];
+                    tbody.innerHTML += `
+                        <tr class="border-b">
+                            <td class="p-2 font-mono">${pin}</td>
+                            <td class="p-2 text-xs text-slate-400" id="loc-${pin}">Auto-Detecting...</td> 
+                            <td class="p-2 text-right cursor-pointer text-blue-600 hover:underline" onclick="openUnmappedDetails('${pin}')">
+                                ${stats.count} pkts <span class="text-slate-400">(${stats.wt.toFixed(0)}kg)</span>
+                            </td>
+                            <td class="p-2"><select class="manual-map-select border rounded p-1 w-full text-sm" data-pin="${pin}">${opts}</select></td>
+                        </tr>`;
+                    fetchPinLocation(pin, `loc-${pin}`);
+                });
+            }
+        }
+        
+        async function fetchPinLocation(pin, elId) {
+            try {
+                const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+                const data = await res.json();
+                if(data[0].Status === 'Success' && data[0].PostOffice.length > 0) {
+                    const loc = data[0].PostOffice[0];
+                    const el = document.getElementById(elId);
+                    if(el) el.textContent = `${loc.Name}, ${loc.District}`;
+                } else { document.getElementById(elId).textContent = "Unknown Loc"; }
+            } catch(e) { document.getElementById(elId).textContent = "Net Error"; }
+        }
+
+        function ignoreAllUnmapped() {
+            const inputs = document.querySelectorAll('.manual-map-select');
+            inputs.forEach(s => {
+                if(!s.value) GLOBAL_PIN_MAP[s.dataset.pin] = 'NA';
+            });
+            checkRouteMapping(); 
+        }
+        
+        function saveManualMapping() {
+             const selects = document.querySelectorAll('.manual-map-select');
+             let all = true;
+             selects.forEach(s => {
+                 if(!s.value) { s.classList.add('border-red-500'); all = false; }
+                 else { s.classList.remove('border-red-500'); GLOBAL_PIN_MAP[s.dataset.pin] = s.value; }
+             });
+             if(all) checkRouteMapping();
+        }
+        
+        // Open details for Unmapped Pincode
+        function openUnmappedDetails(pin) {
+            const items = GLOBAL_DATA.filter(r => (r['pin']||'').trim() == pin);
+            
+            safeSetText('modalTitle', `Unmapped Pin: ${pin}`);
+            document.getElementById('modalSubtitle').innerHTML = `${items.length} Shipments`;
+            
+            const totalWt = items.reduce((s,i) => s + (parseFloat(i.int_wt_iwt)||0), 0);
+            document.getElementById('modalTotalWt').textContent = totalWt.toFixed(1);
+
+            const tbody = document.getElementById('modalBody');
+            tbody.innerHTML = '';
+            
+            items.forEach(item => {
+                const wt = parseFloat(item.int_wt_iwt)||0;
+                let mwb = item.Master_waybill || '-';
+                
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-mono text-slate-600 text-xs">${mwb}</td>
+                    <td class="px-6 py-4 text-slate-800 font-medium text-xs">${item.cl || '-'}</td>
+                    <td class="px-6 py-4 text-slate-500 font-mono text-xs">${item.pin}</td>
+                    <td class="px-6 py-4 text-right text-slate-700 font-bold text-xs">${wt.toFixed(1)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            document.getElementById('detailsModal').classList.remove('hidden');
+        }
+
+        // --- STEP 4: VEHICLES ---
+        function initVehicleData() {
+            GLOBAL_VEHICLE_MAP = {};
+            GLOBAL_TRANSIT_DATA.forEach(row => {
+                const v = (row['vehicle_number'] || '').trim().toUpperCase();
+                if(!v) return;
+                
+                if(!GLOBAL_VEHICLE_MAP[v]) {
+                    GLOBAL_VEHICLE_MAP[v] = {
+                        number: v,
+                        tripId: row['trip_id'] || '-',
+                        type: row['vehicle_type'] || '-',
+                        routeType: row['route_type'] || '-',
+                        origin: row['cs_sl'] || '-',
+                        count: 0,
+                        weight: 0,
+                        items: []
+                    };
+                }
+                const wt = parseFloat(row['int_wt_iwt']) || 0;
+                GLOBAL_VEHICLE_MAP[v].count++;
+                GLOBAL_VEHICLE_MAP[v].weight += wt;
+                GLOBAL_VEHICLE_MAP[v].items.push(row);
+            });
+            renderVehicleTable();
+        }
+
+        function renderVehicleTable(searchTerm = "") {
+            const container = document.getElementById('vehicleListContainer');
+            container.innerHTML = '';
+            
+            let vehicles = Object.values(GLOBAL_VEHICLE_MAP);
+            if(searchTerm) {
+                const lower = searchTerm.toLowerCase();
+                vehicles = vehicles.filter(v => 
+                    v.number.toLowerCase().includes(lower) || 
+                    v.tripId.toLowerCase().includes(lower)
+                );
+            }
+            vehicles.sort((a,b) => b.weight - a.weight);
+
+            vehicles.forEach(v => {
+                const div = document.createElement('div');
+                div.className = "grid grid-cols-12 gap-2 p-3 border-b border-slate-100 hover:bg-indigo-50 items-center text-xs transition-colors";
+                
+                let tripLink = '-';
+                if (v.tripId !== '-') {
+                    const cleanTripId = v.tripId.toString().replace(/^trip-/, ''); 
+                    tripLink = `<a href="https://midmile.delhivery.com/#/search/trip-detail/trip-${cleanTripId}" target="_blank" class="text-blue-600 hover:underline flex items-center gap-1">${v.tripId} <i data-lucide="external-link" class="w-3 h-3"></i></a>`;
+                }
+
+                div.innerHTML = `
+                    <div class="col-span-1 text-center"><input type="checkbox" class="vehicle-checkbox custom-checkbox rounded w-4 h-4" value="${v.number}" onchange="updateVehicleSelectionCount()"></div>
+                    <div class="col-span-2 font-mono font-bold text-indigo-700">${v.number}</div>
+                    <div class="col-span-2 text-slate-600 truncate" title="${v.tripId}">${tripLink}</div>
+                    <div class="col-span-2 text-slate-600 truncate" title="${v.origin}">${v.origin}</div>
+                    <div class="col-span-2 text-slate-500">${v.type}</div>
+                    <div class="col-span-2 text-slate-500">${v.routeType}</div>
+                    <div class="col-span-1 text-right font-medium text-blue-600 cursor-pointer hover:underline hover:text-blue-800" onclick="openVehicleDetails('${v.number}')">${v.count} / ${v.weight.toFixed(0)}</div>
+                `;
+                container.appendChild(div);
+            });
+            lucide.createIcons(); 
+        }
+
+        function handleVehicleSearch() { renderVehicleTable(document.getElementById('vehicleSearchInput').value); }
+        function updateVehicleSelectionCount() { safeSetText('vehicleCountDisplay', document.querySelectorAll('.vehicle-checkbox:checked').length); }
+        function resetSelection() { document.querySelectorAll('.vehicle-checkbox').forEach(cb => cb.checked = false); updateVehicleSelectionCount(); }
+        function openPasteModal() { document.getElementById('pasteVehicleModal').classList.remove('hidden'); }
+        function closePasteModal() { document.getElementById('pasteVehicleModal').classList.add('hidden'); }
+        function processPasteInput() {
+            const text = document.getElementById('vehiclePasteArea').value;
+            const pasted = text.split('\n').map(v => v.trim().toUpperCase()).filter(v => v !== '');
+            const valid = [], invalid = [];
+            pasted.forEach(v => { if(GLOBAL_VEHICLE_MAP[v]) valid.push(v); else invalid.push(v); });
+            safeSetText('valTotal', pasted.length); safeSetText('valValid', valid.length); safeSetText('valInvalid', invalid.length);
+            const listEl = document.getElementById('valInvalidList');
+            if(invalid.length > 0) { listEl.textContent = invalid.join(', '); listEl.classList.remove('hidden'); } else { listEl.classList.add('hidden'); }
+            document.getElementById('vehicleValidationModal').dataset.validList = JSON.stringify(valid);
+            closePasteModal(); document.getElementById('vehicleValidationModal').classList.remove('hidden');
+        }
+        function closeValidationModal() { document.getElementById('vehicleValidationModal').classList.add('hidden'); }
+        function applyPastedSelection() {
+            const validList = JSON.parse(document.getElementById('vehicleValidationModal').dataset.validList || "[]");
+            document.getElementById('vehicleSearchInput').value = ''; renderVehicleTable(); 
+            const boxes = document.querySelectorAll('.vehicle-checkbox');
+            boxes.forEach(box => { if(validList.includes(box.value)) box.checked = true; });
+            updateVehicleSelectionCount(); closeValidationModal();
+        }
+        function confirmPlanGeneration() {
+            const selectedBoxes = Array.from(document.querySelectorAll('.vehicle-checkbox:checked'));
+            let totalWt = 0;
+            selectedBoxes.forEach(box => { const v = GLOBAL_VEHICLE_MAP[box.value]; if(v) totalWt += v.weight; });
+            safeSetText('confVehCount', selectedBoxes.length); safeSetText('confTotalWt', totalWt.toLocaleString(undefined, {maximumFractionDigits:1}) + " Kg");
+            const tmrw = new Date(); tmrw.setDate(tmrw.getDate() + 1);
+            const dateInput = document.getElementById('confirmDateInput'); if(dateInput) dateInput.valueAsDate = tmrw;
+            document.getElementById('planConfirmationModal').classList.remove('hidden');
+        }
+        function closePlanConfirmation() { document.getElementById('planConfirmationModal').classList.add('hidden'); }
+        function finalizePlanGeneration() {
+            const dateInput = document.getElementById('confirmDateInput');
+            let apiDate = ""; 
+            if(dateInput && dateInput.value) {
+                apiDate = dateInput.value; const d = new Date(dateInput.value); SELECTED_PLAN_DATE = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+            } else {
+                const tmrw = new Date(); tmrw.setDate(tmrw.getDate() + 1); apiDate = tmrw.toISOString().split('T')[0]; SELECTED_PLAN_DATE = tmrw.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+            }
+            window.WEATHER_API_DATE = apiDate; closePlanConfirmation();
+            
+            const selectedVehicles = new Set(Array.from(document.querySelectorAll('.vehicle-checkbox:checked')).map(cb => cb.value));
+            const selectedTransitData = [];
+            selectedVehicles.forEach(vNum => { if(GLOBAL_VEHICLE_MAP[vNum]) selectedTransitData.push(...GLOBAL_VEHICLE_MAP[vNum].items); });
+            GLOBAL_DISPLAY_DATA = [...GLOBAL_PENDING_DATA, ...selectedTransitData];
+            safeSetText('dashboardVehicleCount', `${selectedVehicles.size} Incoming`);
+            
+            applyRouteMappingToGlobal();
+            initDispatchState();
+
+            renderDashboard(GLOBAL_DISPLAY_DATA);
+            goToStep(5);
+        }
+
+        // --- Allocation Logic ---
+        function initDispatchState() {
+            DISPATCH_STATE = {};
+            const activeRoutes = new Set(GLOBAL_DISPLAY_DATA.map(r => r.mapped_route));
+            
+            activeRoutes.forEach(r => {
+                if(r === 'NA' || r === 'Unassigned') return;
+                DISPATCH_STATE[r] = {};
+            });
+        }
+
+        function applyRouteMappingToGlobal() {
+            const mappedData = [];
+            GLOBAL_DISPLAY_DATA.forEach(row => {
+                const pin = (row['pin'] || '').trim();
+                let route = GLOBAL_PIN_MAP[pin] || 'Unassigned';
+                if (route.toUpperCase() !== 'NA') { row['mapped_route'] = route; mappedData.push(row); }
+            });
+            const unassignedCount = mappedData.filter(r => r['mapped_route'] === 'Unassigned').length;
+            if(unassignedCount > 0) {
+                safeSetText('unassignedCountDisplay', unassignedCount);
+                // Populate dropdown
+                const select = document.getElementById('routeSelect');
+                let opts = `<option value="">Select Route...</option>`;
+                GLOBAL_DETECTED_ROUTES.forEach(r => { opts += `<option value="${r}">${r}</option>`; });
+                opts += `<option value="__NEW__" class="font-bold text-indigo-600">+ Create New Route...</option>`;
+                select.innerHTML = opts;
+                document.getElementById('unassignedPromptModal').classList.remove('hidden');
+            }
+            GLOBAL_DISPLAY_DATA = mappedData;
+        }
+
+        // Reused Functions
+        function proceedToDashboard() { document.getElementById('unassignedPromptModal').classList.add('hidden'); initLoadPlanning(); }
+        function openUnassignedManager() { document.getElementById('unassignedPromptModal').classList.add('hidden'); renderUnassignedTable(); document.getElementById('assignmentManagerModal').classList.remove('hidden'); }
+        function renderUnassignedTable() {
+            const tbody = document.getElementById('unassignedTableBody');
+            if(!tbody) return; tbody.innerHTML = '';
+            const unassignedItems = GLOBAL_DISPLAY_DATA.filter(row => row['mapped_route'] === 'Unassigned');
+            if(unassignedItems.length === 0) { closeAssignmentManager(); renderDashboard(GLOBAL_DISPLAY_DATA); return; }
+            unassignedItems.forEach(row => {
+                const tr = document.createElement('tr'); tr.className = "hover:bg-slate-50 border-b border-slate-100";
+                tr.innerHTML = `<td class="p-4"><input type="checkbox" class="unassigned-checkbox custom-checkbox rounded w-4 h-4" onchange="updateSelectedCount()"></td><td class="p-4 font-mono text-slate-700 font-medium">${row['Master_waybill']}</td><td class="p-4 text-slate-600">${row['pin'] || '-'}</td><td class="p-4 text-right text-xs text-slate-400">${parseFloat(row['int_wt_iwt']||0).toFixed(1)}kg</td>`;
+                tr.dataObject = row; tbody.appendChild(tr);
+            });
+            updateSelectedCount();
+        }
+        function updateSelectedCount() { safeSetText('selectedCountDisplay', document.querySelectorAll('.unassigned-checkbox:checked').length); }
+        function closeAssignmentManager() { document.getElementById('assignmentManagerModal').classList.add('hidden'); renderDashboard(GLOBAL_DISPLAY_DATA); goToStep(5); }
+        function checkNewRouteOption() {
+            const val = document.getElementById('routeSelect').value;
+            const input = document.getElementById('newRouteInput');
+            if(input) { if(val === '__NEW__') { input.classList.remove('hidden'); input.focus(); } else { input.classList.add('hidden'); } }
+        }
+        function applyManualAssignment() {
+             const selectVal = document.getElementById('routeSelect').value;
+            let targetRoute = selectVal;
+            if (!selectVal) { alert("Please select a route."); return; }
+            if (selectVal === '__NEW__') {
+                const newVal = document.getElementById('newRouteInput').value.trim();
+                if(!newVal) { alert("Please enter a name for the new route."); return; }
+                targetRoute = newVal;
+            }
+            const checkboxes = document.querySelectorAll('.unassigned-checkbox:checked');
+            if(checkboxes.length === 0) { alert("Please select at least one shipment to assign."); return; }
+            checkboxes.forEach(cb => {
+                const row = cb.closest('tr').dataObject;
+                if(row) { row['mapped_route'] = targetRoute; }
+            });
+            renderUnassignedTable();
+            document.getElementById('routeSelect').value = "";
+            const input = document.getElementById('newRouteInput');
+            if(input) { input.value = ""; input.classList.add('hidden'); }
+        }
+
+        // --- FLEET PICKER ---
+        function openFleetPicker(route) {
+            CURRENT_ROUTE_TARGET = route;
+            document.getElementById('fleetPickerModal').classList.remove('hidden');
+            renderFleetPickerList();
+        }
+
+        function closeFleetPicker() {
+            document.getElementById('fleetPickerModal').classList.add('hidden');
+        }
+
+        function renderFleetPickerList(search = "") {
+            const tbody = document.getElementById('fleetPickerBody');
+            tbody.innerHTML = '';
+            
+            const lowerSearch = search.toLowerCase();
+            const filteredFleet = FLEET_MASTER.filter(v => 
+                v.no.toLowerCase().includes(lowerSearch) || 
+                v.transporter.toLowerCase().includes(lowerSearch) ||
+                v.type.toLowerCase().includes(lowerSearch)
+            );
+
+            if (filteredFleet.length === 0) {
+                 tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">No vehicles found.</td></tr>`;
+                 return;
+            }
+
+            filteredFleet.forEach(v => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-indigo-50 border-b border-slate-100 transition-colors";
+                tr.innerHTML = `
+                    <td class="px-6 py-3">
+                        <div class="font-bold text-slate-700">${v.no}</div>
+                    </td>
+                    <td class="px-6 py-3 text-slate-600">
+                        ${v.type} <span class="text-xs text-slate-400">(${v.size})</span>
+                    </td>
+                    <td class="px-6 py-3 text-slate-600">${v.transporter}</td>
+                    <td class="px-6 py-3 text-right font-mono">₹${v.acpd}</td>
+                    <td class="px-6 py-3 text-right">
+                        <button onclick="selectVehicleForRoute('${v.no}')" class="bg-indigo-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-indigo-700">
+                            Select
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterFleetPicker() {
+            const val = document.getElementById('fleetPickerSearch').value;
+            renderFleetPickerList(val);
+        }
+
+        function selectVehicleForRoute(vNo) {
+            addVehicleToRoute(CURRENT_ROUTE_TARGET, vNo);
+            closeFleetPicker();
+        }
+
+        // --- UPDATE RENDER PLANNING BOARD FOR NEW PICKER ---
+        function renderPlanningBoard() {
+             const container = document.getElementById('routesGrid');
+             // TABLE MODE NOW
+             const tbody = document.getElementById('draftTableBody');
+             tbody.innerHTML = '';
+             
+             const routeStats = {};
+             GLOBAL_DISPLAY_DATA.forEach(r => {
+                const rt = r['mapped_route'];
+                if(rt === 'NA' || rt === 'Unassigned') return;
+                
+                let pdt = (r['pdt'] || '').trim().toLowerCase();
+                let cat = 'B2C';
+                if (pdt.includes('b2b')) cat = 'B2B';
+                else if (pdt.includes('heavy')) cat = 'Heavy';
+                
+                if(!routeStats[rt]) routeStats[rt] = { B2C:{c:0,w:0}, B2B:{c:0,w:0}, Heavy:{c:0,w:0}, Total:{c:0,w:0}, name: rt };
+                
+                const wt = parseFloat(r['int_wt_iwt'])||0;
+                routeStats[rt][cat].c++;
+                routeStats[rt][cat].w += wt;
+                routeStats[rt].Total.c++;
+                routeStats[rt].Total.w += wt;
+             });
+
+             Object.keys(routeStats).sort().forEach(rt => {
+                const s = routeStats[rt];
+                
+                let rec = "Small Load";
+                if(s.Total.w > 2500) rec = "1x 14ft"; else if(s.Total.w > 1000) rec = "1x 407/Pickup";
+                
+                // Render Assigned Vehicles as buttons
+                let fleetHtml = '';
+                const vehicles = DISPATCH_PLAN[rt] || [];
+                
+                if(vehicles.length > 0) {
+                     fleetHtml = vehicles.map((v, idx) => renderAssignedVehicle(rt, idx, v)).join('');
+                }
+                
+                // Add "Assign Fleet" button
+                fleetHtml += `<button onclick="openFleetPicker('${rt}')" class="mt-2 w-full bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold py-1.5 rounded flex items-center justify-center gap-1 border border-dashed border-slate-300">
+                    <i data-lucide="plus" class="w-3 h-3"></i> Assign Fleet
+                </button>`;
+
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-slate-100 hover:bg-slate-50";
+                
+                // Cells
+                tr.innerHTML = `
+                    <td class="p-4 border-r border-slate-200 font-bold text-slate-800">
+                        ${rt}
+                        <div class="text-[10px] font-normal text-blue-600 mt-1 bg-blue-50 inline-block px-1.5 py-0.5 rounded">Rec: ${rec}</div>
+                    </td>
+                    <td class="p-2 text-center text-xs text-blue-700 font-bold">${s.B2C.c}</td>
+                    <td class="p-2 text-center text-xs text-slate-500 border-r border-slate-200">${s.B2C.w.toFixed(0)}</td>
+                    
+                    <td class="p-2 text-center text-xs text-purple-700 font-bold">${s.B2B.c}</td>
+                    <td class="p-2 text-center text-xs text-slate-500 border-r border-slate-200">${s.B2B.w.toFixed(0)}</td>
+                    
+                    <td class="p-2 text-center text-xs text-orange-700 font-bold">${s.Heavy.c}</td>
+                    <td class="p-2 text-center text-xs text-slate-500 border-r border-slate-200">${s.Heavy.w.toFixed(0)}</td>
+                    
+                    <td class="p-2 text-center text-xs font-bold bg-slate-50 text-slate-800">${s.Total.c}</td>
+                    <td class="p-2 text-center text-xs font-bold bg-slate-50 text-slate-800 border-r border-slate-300">${s.Total.w.toFixed(0)}</td>
+                    
+                    <td class="p-2 align-top">
+                        <div class="flex flex-col gap-2 min-w-[180px]">
+                            ${fleetHtml}
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+             });
+             updateFleetStats();
+             lucide.createIcons();
+        }
+
+        // --- STEP 5: LOAD PLANNING (INIT) ---
+        function initLoadPlanning() {
+             const routes = new Set(GLOBAL_DISPLAY_DATA.map(r => r.mapped_route));
+             routes.forEach(rt => { 
+                 if(rt !== 'NA' && rt !== 'Unassigned' && !DISPATCH_PLAN[rt]) DISPATCH_PLAN[rt] = []; 
+             });
+             renderPlanningBoard();
+        }
+        
+        function renderDashboard(data) {
+             renderPlanningBoard();
+        }
+
+        function renderAssignedVehicle(route, idx, alloc) {
+            const vData = FLEET_MASTER.find(f => f.no === alloc.vNo);
+            if(!vData) return ''; 
+            const isCarting = vData.type.toLowerCase() === 'carting';
+            
+            let currentLoad = 0;
+            alloc.load.forEach(mwb => {
+                const item = GLOBAL_DISPLAY_DATA.find(r => r.Master_waybill == mwb);
+                if(item) currentLoad += parseFloat(item.int_wt_iwt)||0;
+            });
+            
+            let cost = vData.acpd;
+            if(isCarting) {
+                const contractHrs = vData.hours || 12;
+                const used = alloc.usedHrs || 0;
+                cost = (used > 0) ? (vData.acpd * (used/contractHrs)) : 0;
+            }
+            const cpk = currentLoad > 0 ? (cost / currentLoad).toFixed(2) : 0;
+            const cap = VEHICLE_STANDARDS.find(s => s.type.toLowerCase() === vData.size.toLowerCase())?.wt || 0;
+            const util = cap > 0 ? (currentLoad/cap)*100 : 0;
+
+            return `
+            <div class="border border-indigo-200 bg-white rounded p-2 shadow-sm">
+                <div class="flex justify-between items-center mb-1">
+                    <div class="flex items-center gap-1 font-bold text-xs text-indigo-700">
+                        <i data-lucide="truck" class="w-3 h-3"></i> ${vData.no}
+                    </div>
+                    <button onclick="removeVehicle('${route}', ${idx})" class="text-slate-400 hover:text-red-500"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                </div>
+                <div class="flex justify-between text-[10px] text-slate-500 mb-1">
+                    <span>${vData.size}</span>
+                    <span>${util.toFixed(0)}% Util</span>
+                </div>
+                <div class="w-full bg-slate-100 h-1.5 rounded-full mb-2">
+                     <div class="bg-indigo-500 h-1.5 rounded-full" style="width: ${Math.min(util,100)}%"></div>
+                </div>
+                <div class="flex gap-1">
+                     <button onclick="openLoadModal('${route}', ${idx})" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] py-1 rounded font-bold">Load</button>
+                     ${isCarting ? `<button onclick="editHrs('${route}', ${idx})" class="bg-yellow-50 text-yellow-700 px-1.5 rounded text-[10px] border border-yellow-200">Hrs</button>` : ''}
+                </div>
+            </div>`;
+        }
+        
+        function updateFleetStats() {
+            const total = FLEET_MASTER.length;
+            let used = 0;
+            Object.values(DISPATCH_PLAN).forEach(arr => used += arr.length);
+            document.getElementById('fleetStats').innerHTML = `<span>Used: <strong>${used}</strong></span><span>Total: <strong>${total}</strong></span>`;
+            lucide.createIcons();
+        }
+
+        // --- DISPATCH ACTIONS ---
+        function addVehicleToRoute(route, vNo) {
+            if(!vNo) return;
+            if(!DISPATCH_PLAN[route]) DISPATCH_PLAN[route] = [];
+            DISPATCH_PLAN[route].push({ vNo: vNo, load: [], run2: false, usedHrs: 0 }); 
+            renderPlanningBoard();
+        }
+        function removeVehicle(route, idx) {
+            DISPATCH_PLAN[route].splice(idx, 1);
+            renderPlanningBoard();
+        }
+        function toggleSecondRun(route, idx) {
+            DISPATCH_PLAN[route][idx].run2 = !DISPATCH_PLAN[route][idx].run2;
+            renderPlanningBoard();
+        }
+        function editHrs(route, idx) {
+            const h = prompt("Enter hours used:");
+            if(h) {
+                DISPATCH_PLAN[route][idx].usedHrs = parseFloat(h);
+                renderPlanningBoard();
+            }
+        }
+
+        // --- LOAD MODAL ---
+        let CUR_MODAL = {};
+        function openLoadModal(route, idx) {
+            CUR_MODAL = { route, idx };
+            const vehicle = DISPATCH_PLAN[route][idx];
+            const vData = FLEET_MASTER.find(f => f.no === vehicle.vNo);
+            
+            safeSetText('lamTitle', `Loading ${vData.no}`);
+            safeSetText('lamSubtitle', `Route: ${route}`);
+            
+            const isCarting = vData.type.toLowerCase() === 'carting';
+            const cs = document.getElementById('cartingSettings');
+            if(isCarting) {
+                cs.classList.remove('hidden');
+                safeSetText('contractHrsVal', vData.hours); // Use safeSetText
+                safeSetText('usedHrsVal', vehicle.usedHrs || 0); // Use safeSetText
+                document.getElementById('lamHoursSlider').value = vehicle.usedHrs || 0;
+            } else {
+                cs.classList.add('hidden');
+            }
+            document.getElementById('lamSecondRun').checked = vehicle.run2;
+
+            // NEW: Get smart groups
+            const routeItems = GLOBAL_DISPLAY_DATA.filter(r => r.mapped_route === route);
+            // Group by Pincode
+            const pinGroups = {};
+            routeItems.forEach(i => {
+                const p = i.pin || 'Unknown';
+                if(!pinGroups[p]) pinGroups[p] = { count: 0, wt: 0, ids: [] };
+                pinGroups[p].count++;
+                pinGroups[p].wt += parseFloat(i.int_wt_iwt)||0;
+                pinGroups[p].ids.push(i.Master_waybill);
+            });
+
+            // Group by Category
+            const catGroups = { 'B2C':{c:0,w:0,ids:[]}, 'B2B':{c:0,w:0,ids:[]}, 'Heavy':{c:0,w:0,ids:[]} };
+            routeItems.forEach(i => {
+                let pdt = (i.pdt||'').trim().toLowerCase();
+                let cat = 'B2C';
+                if(pdt.includes('b2b')) cat = 'B2B';
+                else if(pdt.includes('heavy')) cat = 'Heavy';
+                catGroups[cat].c++;
+                catGroups[cat].w += parseFloat(i.int_wt_iwt)||0;
+                catGroups[cat].ids.push(i.Master_waybill);
+            });
+
+            renderSmartGroups(catGroups, pinGroups);
+            renderLoadTable();
+            updateLamCost(); 
+            document.getElementById('loadAssignmentModal').classList.remove('hidden');
+        }
+
+        async function renderSmartGroups(catGroups, pinGroups) {
+            const container = document.getElementById('lamBulkGroups');
+            container.innerHTML = '';
+            
+            // Render Categories
+            for(const [cat, data] of Object.entries(catGroups)) {
+                if(data.c === 0) continue;
+                // Check if all selected?
+                // Logic: Button toggles selection
+                container.innerHTML += `
+                    <div class="bg-white border border-slate-200 rounded p-2 flex items-center justify-between hover:bg-slate-50 cursor-pointer" onclick="toggleBulkGroup('${cat}', '${data.ids.join(',')}')">
+                        <div>
+                            <div class="text-xs font-bold text-slate-700">${cat}</div>
+                            <div class="text-[10px] text-slate-500">${data.c} pkts • ${data.w.toFixed(0)}kg</div>
+                        </div>
+                        <i data-lucide="plus-circle" class="w-4 h-4 text-indigo-600"></i>
+                    </div>`;
+            }
+            
+            // Render Pincodes
+            container.innerHTML += `<div class="text-[10px] font-bold text-slate-400 uppercase mt-4 mb-2">By Pincode</div>`;
+            
+            for(const [pin, data] of Object.entries(pinGroups)) {
+                const divId = `grp-${pin}`;
+                // Fetch location async
+                fetch(`https://api.postalpincode.in/pincode/${pin}`)
+                    .then(res => res.json())
+                    .then(d => {
+                        const name = (d[0].Status === 'Success') ? d[0].PostOffice[0].Name : 'Unknown';
+                        const el = document.getElementById(`loc-${pin}`);
+                        if(el) el.textContent = name;
+                    });
+
+                container.innerHTML += `
+                    <div class="bg-white border border-slate-200 rounded p-2 flex items-center justify-between hover:bg-slate-50 cursor-pointer" onclick="toggleBulkGroup('PIN', '${data.ids.join(',')}')">
+                        <div>
+                            <div class="text-xs font-bold text-slate-700 flex items-center gap-1">
+                                ${pin} <span class="font-normal text-slate-400" id="loc-${pin}">...</span>
+                            </div>
+                            <div class="text-[10px] text-slate-500">${data.count} pkts • ${data.wt.toFixed(0)}kg</div>
+                        </div>
+                        <i data-lucide="map-pin" class="w-4 h-4 text-slate-400"></i>
+                    </div>`;
+            }
+            lucide.createIcons();
+        }
+
+        function toggleBulkGroup(type, idsStr) {
+            const ids = idsStr.split(',');
+            // Check current selection state of these IDs to determine toggle (add or remove)
+            // Simple logic: Add them.
+            const checks = document.querySelectorAll('.lam-check');
+            let allChecked = true;
+            
+            // Check if all are already checked
+            /*
+            checks.forEach(c => {
+                if(ids.includes(c.value) && !c.checked) allChecked = false;
+            });
+            */
+            // Force Add
+            checks.forEach(c => {
+                if(ids.includes(c.value)) c.checked = true;
+            });
+            updateLamStats();
+        }
+        
+        function renderLoadTable() {
+            const tbody = document.getElementById('lamTableBody');
+            tbody.innerHTML = '';
+            
+            const allItems = GLOBAL_DISPLAY_DATA.filter(r => r.mapped_route === CUR_MODAL.route);
+            const otherAssigned = new Set();
+            DISPATCH_PLAN[CUR_MODAL.route].forEach((v, i) => {
+                if (i !== CUR_MODAL.idx) v.load.forEach(id => otherAssigned.add(id));
+            });
+            const currentAssigned = new Set(DISPATCH_PLAN[CUR_MODAL.route][CUR_MODAL.idx].load);
+
+            let count = 0;
+            allItems.forEach(item => {
+                const id = item.Master_waybill;
+                const isMine = currentAssigned.has(id);
+                const isTaken = otherAssigned.has(id);
+                const tr = document.createElement('tr');
+                tr.className = isTaken ? "bg-slate-50 opacity-50" : "hover:bg-indigo-50";
+                let check = `<input type="checkbox" class="lam-check" value="${id}" data-wt="${item.int_wt_iwt}" data-cat="${item.pdt||'B2C'}" ${isMine?'checked':''} onchange="updateLamStats()">`;
+                if(isTaken) check = `<i data-lucide="lock" class="w-3 h-3 text-slate-400"></i>`;
+                
+                tr.innerHTML = `<td class="p-2">${check}</td><td class="p-2 font-mono">${id}</td><td class="p-2 truncate max-w-[100px]" title="${item.cl}">${item.cl||'-'}</td><td class="p-2">${item.pin}</td><td class="p-2 text-right">${parseFloat(item.int_wt_iwt).toFixed(1)}</td>`;
+                tbody.appendChild(tr);
+                if(isMine) count++;
+            });
+            safeSetText('lamSelectionCount', `${count} selected`);
+        }
+
+        function updateLamStats() {
+            const checks = document.querySelectorAll('.lam-check:checked');
+            let wt = 0;
+            const newLoad = [];
+            checks.forEach(c => {
+                wt += parseFloat(c.dataset.wt)||0;
+                newLoad.push(c.value);
+            });
+            DISPATCH_PLAN[CUR_MODAL.route][CUR_MODAL.idx].load = newLoad;
+            safeSetText('lamCurLoad', `${wt.toFixed(1)} kg`);
+            safeSetText('lamSelectionCount', `${newLoad.length} selected`);
+            updateLamCost(); 
+        }
+        
+        function updateLamCost() {
+            const vehicle = DISPATCH_PLAN[CUR_MODAL.route][CUR_MODAL.idx];
+            const vData = FLEET_MASTER.find(f => f.no === vehicle.vNo);
+            const isCarting = vData.type.toLowerCase() === 'carting';
+            
+            // Get Capacity
+            const capSpec = VEHICLE_STANDARDS.find(s => s.type.toLowerCase() === vData.size.toLowerCase());
+            const maxCap = capSpec ? capSpec.wt : 0;
+
+            if(isCarting) {
+                const hrs = document.getElementById('lamHoursSlider').value;
+                vehicle.usedHrs = parseFloat(hrs);
+                safeSetText('usedHrsVal', hrs);
+            }
+            vehicle.run2 = document.getElementById('lamSecondRun').checked;
+
+            let cost = vData.acpd;
+            if(isCarting) {
+                cost = (vehicle.usedHrs > 0) ? (vData.acpd * (vehicle.usedHrs / vData.hours)) : 0;
+            }
+            
+            let wt = 0;
+            vehicle.load.forEach(id => {
+                 const item = GLOBAL_DISPLAY_DATA.find(r => r.Master_waybill == id);
+                 if(item) wt += parseFloat(item.int_wt_iwt)||0;
+            });
+
+            // Utilization Logic
+            const util = maxCap > 0 ? (wt / maxCap) * 100 : 0;
+            safeSetText('lamUtilText', `${util.toFixed(0)}%`);
+            safeSetText('lamMaxCap', maxCap);
+            
+            const bar = document.getElementById('lamUtilBar');
+            bar.style.width = `${Math.min(util, 100)}%`;
+            if(util > 100) { 
+                bar.classList.add('bg-red-500'); bar.classList.remove('bg-green-500', 'bg-orange-500'); 
+                document.getElementById('lamOverloadMsg').classList.remove('hidden');
+                // Suggest 2nd Run
+                if(!vehicle.run2) {
+                    document.getElementById('run2Badge').classList.remove('hidden');
+                }
+            } else if (util > 95) {
+                bar.classList.add('bg-orange-500'); bar.classList.remove('bg-green-500', 'bg-red-500');
+                document.getElementById('lamOverloadMsg').classList.add('hidden');
+            } else {
+                bar.classList.add('bg-green-500'); bar.classList.remove('bg-orange-500', 'bg-red-500');
+                document.getElementById('lamOverloadMsg').classList.add('hidden');
+            }
+
+            const cpk = wt > 0 ? (cost/wt).toFixed(2) : '0.00';
+            safeSetText('lamCurCost', `₹${cost.toFixed(0)}`);
+            safeSetText('lamCpk', cpk);
+        }
+
+        function clearVehicleLoad() {
+             document.querySelectorAll('.lam-check').forEach(c => c.checked = false);
+             updateLamStats();
+        }
+        function closeLoadAssignment() {
+            document.getElementById('loadAssignmentModal').classList.add('hidden');
+            renderPlanningBoard();
+        }
+
+        // --- FINAL VIEW & EXPORT ---
+        function toggleFinalView() {
+            const p = document.getElementById('planningView');
+            const f = document.getElementById('finalView');
+            const b = document.getElementById('viewToggleBtn');
+            if(p.classList.contains('hidden')) {
+                p.classList.remove('hidden'); f.classList.add('hidden');
+                b.innerHTML = `<i data-lucide="eye" class="w-4 h-4"></i> View Final Plan`;
+            } else {
+                p.classList.add('hidden'); f.classList.remove('hidden');
+                b.innerHTML = `<i data-lucide="edit-3" class="w-4 h-4"></i> Edit Allocation`;
+                renderFinalDashboard();
+            }
+            lucide.createIcons();
+        }
+
+        function renderFinalDashboard() {
+            const tbody = document.getElementById('dashboardBody');
+            const cpkBody = document.getElementById('cpkTableBody');
+            tbody.innerHTML = ''; cpkBody.innerHTML = '';
+            
+            const routes = Object.keys(DISPATCH_PLAN).sort();
+            
+            routes.forEach(rt => {
+                const vehicles = DISPATCH_PLAN[rt];
+                if(vehicles.length === 0) return; 
+                
+                let rtStats = { b2c:0, b2b:0, heavy:0, b2cW:0, b2bW:0, heavyW:0 };
+                
+                vehicles.forEach(v => {
+                    v.load.forEach(id => {
+                        const item = GLOBAL_DISPLAY_DATA.find(r => r.Master_waybill == id);
+                        if(item) {
+                            let cat = item.pdt || 'B2C';
+                            let wt = parseFloat(item.int_wt_iwt)||0;
+                            if(cat.toLowerCase().includes('b2b')) { rtStats.b2b++; rtStats.b2bW+=wt; }
+                            else if(cat.toLowerCase().includes('heavy')) { rtStats.heavy++; rtStats.heavyW+=wt; }
+                            else { rtStats.b2c++; rtStats.b2cW+=wt; }
+                        }
+                    });
+                    
+                    const vData = FLEET_MASTER.find(f => f.no === v.vNo);
+                    let cost = vData.acpd;
+                    if(vData.type.toLowerCase() === 'carting') cost = (v.usedHrs/vData.hours)*vData.acpd;
+                    
+                    let load = 0; v.load.forEach(id => { const i = GLOBAL_DISPLAY_DATA.find(r => r.Master_waybill == id); if(i) load += parseFloat(i.int_wt_iwt)||0; });
+                    const cpk = load > 0 ? (cost/load).toFixed(2) : 0;
+                    
+                    cpkBody.innerHTML += `<tr class="border-b border-slate-100">
+                        <td class="p-2 font-bold">${v.vNo}</td><td class="p-2">${rt}</td><td class="p-2 text-right">${load.toFixed(0)}</td>
+                        <td class="p-2 text-right">${vData.type}</td><td class="p-2 text-right">${v.usedHrs||'-'} / ${v.run2?'2':'1'}</td>
+                        <td class="p-2 text-right">₹${cost.toFixed(0)}</td><td class="p-2 text-right font-bold ${cpk<2?'text-green-600':'text-red-600'}">${cpk}</td>
+                    </tr>`;
+                });
+                
+                const vList = vehicles.map(v => v.vNo + (v.run2?'(x2)':'')).join(', ');
+                const totalCnt = rtStats.b2c + rtStats.b2b + rtStats.heavy;
+                const totalWt = rtStats.b2cW + rtStats.b2bW + rtStats.heavyW;
+
+                tbody.innerHTML += `
+                <tr class="border-b border-slate-100">
+                    <td class="p-3 border-r"><div class="font-bold text-xs">${rt}</div><div class="text-[9px] text-blue-600">${vList}</div></td>
+                    <td class="text-center text-xs">${rtStats.b2c}</td><td class="text-center text-xs border-r">${rtStats.b2cW.toFixed(0)}</td>
+                    <td class="text-center text-xs">${rtStats.b2b}</td><td class="text-center text-xs border-r">${rtStats.b2bW.toFixed(0)}</td>
+                    <td class="text-center text-xs">${rtStats.heavy}</td><td class="text-center text-xs border-r">${rtStats.heavyW.toFixed(0)}</td>
+                    <td class="text-center font-bold text-xs bg-slate-50">${totalCnt}</td><td class="text-center font-bold text-xs bg-slate-50">${totalWt.toFixed(0)}</td>
+                </tr>`;
+            });
+        }
+        
+        function downloadReport() {
+            const summaryData = [];
+             const routes = Object.keys(DISPATCH_PLAN).sort();
+             routes.forEach(rt => {
+                 DISPATCH_PLAN[rt].forEach(v => {
+                      summaryData.push({ Route: rt, Vehicle: v.vNo, Run2: v.run2?'Yes':'No', LoadCount: v.load.length });
+                 });
+             });
+             
+             const wb = XLSX.utils.book_new();
+             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryData), "Dispatch_Summary");
+             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(GLOBAL_DISPLAY_DATA), "Detailed_Data");
+             XLSX.writeFile(wb, "Final_Dispatch_Plan.xlsx");
+        }
+        function downloadJPG() {
+            const captureElement = document.querySelector('#capture-target'); if (!captureElement) return; captureElement.classList.add('capture-mode');
+            html2canvas(captureElement, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+                const link = document.createElement('a'); link.download = `Dispatch_Plan_${new Date().toISOString().slice(0,10)}.jpg`; link.href = canvas.toDataURL('image/jpeg', 0.9); link.click(); captureElement.classList.remove('capture-mode');
+            }).catch(err => { console.error("Screenshot failed:", err); alert("Error generating image."); captureElement.classList.remove('capture-mode'); });
+        }
+        function openVehicleDetails(vNum) {
+            const vehicle = GLOBAL_VEHICLE_MAP[vNum]; if(!vehicle) return;
+            safeSetText('modalTitle', vNum);
+            document.getElementById('modalTotalWt').textContent = vehicle.weight.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1});
+            const tbody = document.getElementById('modalBody'); tbody.innerHTML = '';
+            vehicle.items.forEach(row => {
+                let mwb = (row['Master_waybill'] || '').toString(); const mcount = parseInt(row['mcount cl'] || row['mcount']) || 0; const displayId = mcount > 0 ? `${mwb} (Lot: ${mcount})` : mwb; let cleanMwb = mwb.replace(/\D/g, ''); const mwbLink = `<a href="https://hq.delhivery.com/p/list/1?type=waybill&q=${cleanMwb}" target="_blank" class="text-indigo-600 hover:underline flex items-center gap-1">${displayId} <i data-lucide="external-link" class="w-3 h-3"></i></a>`; const wt = parseFloat(row['int_wt_iwt']) || 0;
+                const tr = document.createElement('tr'); tr.className = "hover:bg-slate-50 transition-colors";
+                tr.innerHTML = `<td class="px-6 py-4 font-mono text-slate-600 text-xs">${mwbLink}</td><td class="px-6 py-4 text-slate-800 font-medium text-xs">${row['cl'] || '-'}</td><td class="px-6 py-4 text-slate-500 font-mono text-xs">${row['pin'] || '-'}</td><td class="px-6 py-4 text-right text-slate-700 font-bold text-xs">${wt.toFixed(1)}</td>`;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons(); document.getElementById('detailsModal').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
