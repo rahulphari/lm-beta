@@ -1847,10 +1847,18 @@
             const vehicle = DISPATCH_PLAN[route][idx];
             const vData = FLEET_MASTER.find(f => f.no === vehicle.vNo);
             
-            safeSetText('lamTitle', `Loading ${vData.no}`);
-            // Show run info in subtitle
-            const runText = vehicle.runIndex > 1 ? `(Run ${vehicle.runIndex})` : '';
-            safeSetText('lamSubtitle', `Route: ${route} ${runText}`);
+            safeSetText('lamTitle', `Loading ${vData.no} ${vehicle.runIndex > 1 ? '(Run ' + vehicle.runIndex + ')' : ''}`);
+            
+            // UPDATED: Enhanced Header with Transporter, Type, Size
+            document.getElementById('lamSubtitle').innerHTML = `
+                <div class="flex flex-col gap-1 mt-1">
+                    <div class="text-xs text-indigo-200 font-medium">Route: <span class="text-white">${route}</span></div>
+                    <div class="grid grid-cols-2 gap-x-4 text-[10px] text-indigo-300">
+                        <div>Type: <span class="text-white font-bold">${vData.type} (${vData.size})</span></div>
+                        <div class="truncate" title="${vData.transporter}">Transporter: <span class="text-white font-bold">${vData.transporter}</span></div>
+                    </div>
+                </div>
+            `;
             
             const isCarting = vData.type.toLowerCase() === 'carting';
             const cs = document.getElementById('cartingSettings');
@@ -1965,6 +1973,10 @@
             tbody.innerHTML = '';
             
             const allItems = GLOBAL_DISPLAY_DATA.filter(r => r.mapped_route === CUR_MODAL.route);
+            
+            // UPDATED: Sort by Weight (Heaviest to Lightest)
+            allItems.sort((a, b) => (parseFloat(b.int_wt_iwt) || 0) - (parseFloat(a.int_wt_iwt) || 0));
+
             const otherAssigned = new Set();
             // Collect loads from other vehicles AND other runs of same vehicle
             DISPATCH_PLAN[CUR_MODAL.route].forEach((v, i) => {
@@ -2153,11 +2165,11 @@
             });
             const sortedRoutes = Array.from(allRoutes).sort();
             
-            // Grand Totals
-            let grandStats = { availW:0, planW:0 };
+            // Grand Totals (Counts)
+            let grandStats = { availC:0, planC:0 };
 
             sortedRoutes.forEach(rt => {
-                // 1. Calculate Available (Floor)
+                // 1. Calculate Available (Floor) - Weights & Counts
                 let avail = { b2cW:0, b2bW:0, heavyW:0, totalW:0, b2cC:0, b2bC:0, heavyC:0, totalC:0 };
                 GLOBAL_DISPLAY_DATA.filter(r => r.mapped_route === rt).forEach(item => {
                     let cat = item.pdt || 'B2C';
@@ -2168,8 +2180,8 @@
                     avail.totalW+=wt; avail.totalC++;
                 });
 
-                // 2. Calculate Planned (Assigned to Vehicles)
-                let plan = { b2cW:0, b2bW:0, heavyW:0, totalW:0 };
+                // 2. Calculate Planned (Assigned to Vehicles) - Weights & Counts
+                let plan = { b2cW:0, b2bW:0, heavyW:0, totalW:0, b2cC:0, b2bC:0, heavyC:0, totalC:0 };
                 const vehicles = DISPATCH_PLAN[rt] || [];
                 
                 vehicles.forEach(v => {
@@ -2178,21 +2190,21 @@
                         if(item) {
                             let cat = item.pdt || 'B2C';
                             let wt = parseFloat(item.int_wt_iwt)||0;
-                            if(cat.toLowerCase().includes('b2b')) plan.b2bW+=wt;
-                            else if(cat.toLowerCase().includes('heavy')) plan.heavyW+=wt;
-                            else plan.b2cW+=wt;
-                            plan.totalW+=wt;
+                            if(cat.toLowerCase().includes('b2b')) { plan.b2bW+=wt; plan.b2bC++; }
+                            else if(cat.toLowerCase().includes('heavy')) { plan.heavyW+=wt; plan.heavyC++; }
+                            else { plan.b2cW+=wt; plan.b2cC++; }
+                            plan.totalW+=wt; plan.totalC++;
                         }
                     });
                 });
 
-                grandStats.availW += avail.totalW;
-                grandStats.planW += plan.totalW;
+                grandStats.availC += avail.totalC;
+                grandStats.planC += plan.totalC;
 
-                // 3. Helper for AVTD Display
-                const getAvtdHtml = (p, a) => {
-                    if (a <= 0) return '';
-                    const pct = (p / a) * 100;
+                // 3. Helper for AVTD Display using COUNTS
+                const getAvtdHtml = (pC, aC) => {
+                    if (aC <= 0) return '';
+                    const pct = (pC / aC) * 100;
                     let color = 'text-red-500';
                     if (pct >= 95) color = 'text-green-600';
                     else if (pct >= 80) color = 'text-amber-500';
@@ -2204,10 +2216,10 @@
                     tbody.innerHTML += `
                     <tr class="border-b border-slate-100 bg-red-50/30">
                         <td class="p-3 border-r"><div class="font-bold text-xs text-red-600">${rt}</div><div class="text-[9px] text-red-400 italic">(UNPLANNED)</div></td>
-                        <td class="text-center text-xs opacity-50">${avail.b2cC}</td><td class="text-center text-xs border-r opacity-50">${avail.b2cW.toFixed(0)} ${getAvtdHtml(0, avail.b2cW)}</td>
-                        <td class="text-center text-xs opacity-50">${avail.b2bC}</td><td class="text-center text-xs border-r opacity-50">${avail.b2bW.toFixed(0)} ${getAvtdHtml(0, avail.b2bW)}</td>
-                        <td class="text-center text-xs opacity-50">${avail.heavyC}</td><td class="text-center text-xs border-r opacity-50">${avail.heavyW.toFixed(0)} ${getAvtdHtml(0, avail.heavyW)}</td>
-                        <td class="text-center font-bold text-xs bg-slate-50">${avail.totalC}</td><td class="text-center font-bold text-xs bg-slate-50">${avail.totalW.toFixed(0)} ${getAvtdHtml(0, avail.totalW)}</td>
+                        <td class="text-center text-xs opacity-50">${avail.b2cC}</td><td class="text-center text-xs border-r opacity-50">${avail.b2cW.toFixed(0)} ${getAvtdHtml(0, avail.b2cC)}</td>
+                        <td class="text-center text-xs opacity-50">${avail.b2bC}</td><td class="text-center text-xs border-r opacity-50">${avail.b2bW.toFixed(0)} ${getAvtdHtml(0, avail.b2bC)}</td>
+                        <td class="text-center text-xs opacity-50">${avail.heavyC}</td><td class="text-center text-xs border-r opacity-50">${avail.heavyW.toFixed(0)} ${getAvtdHtml(0, avail.heavyC)}</td>
+                        <td class="text-center font-bold text-xs bg-slate-50">${avail.totalC}</td><td class="text-center font-bold text-xs bg-slate-50">${avail.totalW.toFixed(0)} ${getAvtdHtml(0, avail.totalC)}</td>
                     </tr>`;
                 } else {
                     // PLANNED ROW
@@ -2216,10 +2228,10 @@
                     tbody.innerHTML += `
                     <tr class="border-b border-slate-100">
                         <td class="p-3 border-r"><div class="font-bold text-xs text-slate-800">${rt}</div><div class="text-[10px] mt-1 flex flex-wrap gap-1">${vList}</div></td>
-                        <td class="text-center text-xs">${avail.b2cC}</td><td class="text-center text-xs border-r">${avail.b2cW.toFixed(0)} ${getAvtdHtml(plan.b2cW, avail.b2cW)}</td>
-                        <td class="text-center text-xs">${avail.b2bC}</td><td class="text-center text-xs border-r">${avail.b2bW.toFixed(0)} ${getAvtdHtml(plan.b2bW, avail.b2bW)}</td>
-                        <td class="text-center text-xs">${avail.heavyC}</td><td class="text-center text-xs border-r">${avail.heavyW.toFixed(0)} ${getAvtdHtml(plan.heavyW, avail.heavyW)}</td>
-                        <td class="text-center font-bold text-xs bg-slate-50">${avail.totalC}</td><td class="text-center font-bold text-xs bg-slate-50">${avail.totalW.toFixed(0)} ${getAvtdHtml(plan.totalW, avail.totalW)}</td>
+                        <td class="text-center text-xs">${avail.b2cC}</td><td class="text-center text-xs border-r">${avail.b2cW.toFixed(0)} ${getAvtdHtml(plan.b2cC, avail.b2cC)}</td>
+                        <td class="text-center text-xs">${avail.b2bC}</td><td class="text-center text-xs border-r">${avail.b2bW.toFixed(0)} ${getAvtdHtml(plan.b2bC, avail.b2bC)}</td>
+                        <td class="text-center text-xs">${avail.heavyC}</td><td class="text-center text-xs border-r">${avail.heavyW.toFixed(0)} ${getAvtdHtml(plan.heavyC, avail.heavyC)}</td>
+                        <td class="text-center font-bold text-xs bg-slate-50">${avail.totalC}</td><td class="text-center font-bold text-xs bg-slate-50">${avail.totalW.toFixed(0)} ${getAvtdHtml(plan.totalC, avail.totalC)}</td>
                     </tr>`;
                 }
 
@@ -2242,8 +2254,8 @@
                 });
             });
 
-            // Grand Total Footer
-            const grandAvtd = grandStats.availW > 0 ? (grandStats.planW / grandStats.availW) * 100 : 0;
+            // Grand Total Footer - AVTD based on Counts
+            const grandAvtd = grandStats.availC > 0 ? (grandStats.planC / grandStats.availC) * 100 : 0;
             let grandColor = 'text-red-400';
             if (grandAvtd >= 95) grandColor = 'text-green-400';
             else if (grandAvtd >= 80) grandColor = 'text-amber-400';
@@ -2253,7 +2265,7 @@
                     <td colspan="7" class="p-3 text-right uppercase tracking-wider">Plan AVTD Estimate</td>
                     <td colspan="2" class="p-3 text-center bg-slate-700 text-lg ${grandColor}">
                         ${grandAvtd.toFixed(1)}%
-                        <div class="text-[9px] text-slate-400 font-normal normal-case">(${grandStats.planW.toFixed(0)} / ${grandStats.availW.toFixed(0)} kg)</div>
+                        <div class="text-[9px] text-slate-400 font-normal normal-case">(${grandStats.planC} / ${grandStats.availC} LR)</div>
                     </td>
                 </tr>
             `;
@@ -2276,7 +2288,8 @@
                 routeStatsMap[rt] = { 
                     avail: { b2c:0, b2b:0, heavy:0, total:0 },
                     plan: { b2c:0, b2b:0, heavy:0, total:0 },
-                    counts: { b2c:0, b2b:0, heavy:0, total:0 } // LR counts (avail)
+                    counts: { b2c:0, b2b:0, heavy:0, total:0 }, // Available Counts
+                    planCounts: { b2c:0, b2b:0, heavy:0, total:0 } // Planned Counts (NEW)
                 };
             });
 
@@ -2307,27 +2320,35 @@
                             if(item) {
                                 let cat = item.pdt || 'B2C';
                                 let wt = parseFloat(item.int_wt_iwt)||0;
-                                if(cat.toLowerCase().includes('b2b')) routeStatsMap[rt].plan.b2b+=wt;
-                                else if(cat.toLowerCase().includes('heavy')) routeStatsMap[rt].plan.heavy+=wt;
-                                else routeStatsMap[rt].plan.b2c+=wt;
+                                if(cat.toLowerCase().includes('b2b')) { 
+                                    routeStatsMap[rt].plan.b2b+=wt; 
+                                    routeStatsMap[rt].planCounts.b2b++;
+                                } else if(cat.toLowerCase().includes('heavy')) { 
+                                    routeStatsMap[rt].plan.heavy+=wt; 
+                                    routeStatsMap[rt].planCounts.heavy++;
+                                } else { 
+                                    routeStatsMap[rt].plan.b2c+=wt; 
+                                    routeStatsMap[rt].planCounts.b2c++;
+                                }
                                 routeStatsMap[rt].plan.total+=wt;
+                                routeStatsMap[rt].planCounts.total++;
                             }
                         });
                     });
                 }
             });
 
-            // --- SHEET 1: LOAD SUMMARY (Updated with AVTD) ---
+            // --- SHEET 1: LOAD SUMMARY (Updated with AVTD based on Counts) ---
             const loadSummaryData = Object.keys(routeStatsMap).sort().map(rt => {
                 const s = routeStatsMap[rt];
-                const calcAvtd = (p, a) => a > 0 ? ((p/a)*100).toFixed(1) + '%' : '0%';
+                const calcAvtd = (pC, aC) => aC > 0 ? ((pC/aC)*100).toFixed(1) + '%' : '0%';
                 
                 return {
                     "Route": rt,
-                    "B2C LR": s.counts.b2c, "B2C Wt": s.avail.b2c.toFixed(0), "B2C AVTD": calcAvtd(s.plan.b2c, s.avail.b2c),
-                    "B2B LR": s.counts.b2b, "B2B Wt": s.avail.b2b.toFixed(0), "B2B AVTD": calcAvtd(s.plan.b2b, s.avail.b2b),
-                    "Heavy LR": s.counts.heavy, "Heavy Wt": s.avail.heavy.toFixed(0), "Heavy AVTD": calcAvtd(s.plan.heavy, s.avail.heavy),
-                    "Total LR": s.counts.total, "Total Wt": s.avail.total.toFixed(0), "Route AVTD": calcAvtd(s.plan.total, s.avail.total),
+                    "B2C LR": s.counts.b2c, "B2C Wt": s.avail.b2c.toFixed(0), "B2C AVTD": calcAvtd(s.planCounts.b2c, s.counts.b2c),
+                    "B2B LR": s.counts.b2b, "B2B Wt": s.avail.b2b.toFixed(0), "B2B AVTD": calcAvtd(s.planCounts.b2b, s.counts.b2b),
+                    "Heavy LR": s.counts.heavy, "Heavy Wt": s.avail.heavy.toFixed(0), "Heavy AVTD": calcAvtd(s.planCounts.heavy, s.counts.heavy),
+                    "Total LR": s.counts.total, "Total Wt": s.avail.total.toFixed(0), "Route AVTD": calcAvtd(s.planCounts.total, s.counts.total),
                     "Recommended Vehicle": getRecommendation(s.avail.total)
                 };
             });
@@ -2451,4 +2472,4 @@
         }
     </script>
 </body>
-</html>
+                        </html>
