@@ -400,13 +400,13 @@
                             </tr>
                             <!-- ROW 2 -->
                             <tr class="bg-slate-100 text-slate-600 text-[10px] font-bold uppercase border-b border-slate-300">
-                                <th class="py-2 text-center bg-blue-50 text-blue-800">Cnt</th>
+                                <th class="py-2 text-center bg-blue-50 text-blue-800">LR</th>
                                 <th class="py-2 text-center bg-blue-50 text-blue-800 border-r border-blue-100">Wt</th>
-                                <th class="py-2 text-center bg-purple-50 text-purple-800">Cnt</th>
+                                <th class="py-2 text-center bg-purple-50 text-purple-800">LR</th>
                                 <th class="py-2 text-center bg-purple-50 text-purple-800 border-r border-purple-100">Wt</th>
-                                <th class="py-2 text-center bg-orange-50 text-orange-800">Cnt</th>
+                                <th class="py-2 text-center bg-orange-50 text-orange-800">LR</th>
                                 <th class="py-2 text-center bg-orange-50 text-orange-800 border-r border-orange-100">Wt</th>
-                                <th class="py-2 text-center bg-slate-200 text-slate-800">Cnt</th>
+                                <th class="py-2 text-center bg-slate-200 text-slate-800">LR</th>
                                 <th class="py-2 text-center bg-slate-200 text-slate-800 border-r border-slate-300">Wt</th>
                             </tr>
                         </thead>
@@ -1627,7 +1627,6 @@
             let filtered = [];
             if (category === 'Total') {
                 filtered = GLOBAL_DISPLAY_DATA.filter(r => r.mapped_route === route);
-                document.getElementById('modalSubtitle').innerHTML = `<span class="text-indigo-200">Category: </span><span class="font-bold text-white">All Shipments</span>`;
             } else {
                 filtered = GLOBAL_DISPLAY_DATA.filter(r => {
                     if (r.mapped_route !== route) return false;
@@ -1637,8 +1636,22 @@
                     if (category === 'B2C') return !pdt.includes('b2b') && !pdt.includes('heavy');
                     return false;
                 });
-                document.getElementById('modalSubtitle').innerHTML = `<span class="text-indigo-200">Category: </span><span class="font-bold text-white">${category}</span>`;
             }
+
+            // SORT: Heaviest to Lowest
+            filtered.sort((a, b) => (parseFloat(b.int_wt_iwt) || 0) - (parseFloat(a.int_wt_iwt) || 0));
+
+            // Extract Pincodes
+            const uniquePins = [...new Set(filtered.map(i => i.pin))].filter(p => p);
+            const pinStr = uniquePins.length > 0 ? uniquePins.join(', ') : 'None';
+
+            const catLabel = category === 'Total' ? 'All Shipments' : category;
+            document.getElementById('modalSubtitle').innerHTML = `
+                <div class="flex flex-col gap-1">
+                    <div><span class="text-indigo-200">Category: </span><span class="font-bold text-white">${catLabel}</span></div>
+                    <div class="text-[10px] text-indigo-300 break-words w-full">Pincodes: <span class="text-white">${pinStr}</span></div>
+                </div>
+            `;
 
             // Calc Total Wt for filtered
             const totalWt = filtered.reduce((sum, item) => sum + (parseFloat(item.int_wt_iwt) || 0), 0);
@@ -1654,7 +1667,12 @@
             filtered.forEach(row => {
                 let mwb = (row['Master_waybill'] || '').toString(); 
                 let cleanMwb = mwb.replace(/\D/g, ''); 
-                const mwbLink = `<a href="https://hq.delhivery.com/p/list/1?type=waybill&q=${cleanMwb}" target="_blank" class="text-indigo-600 hover:underline flex items-center gap-1 font-mono">${mwb} <i data-lucide="external-link" class="w-3 h-3"></i></a>`; 
+                
+                // LOT LOGIC
+                const mcount = parseInt(row['mcount cl'] || row['mcount']) || 0; 
+                const displayId = mcount > 0 ? `${mwb} (Lot: ${mcount})` : mwb;
+
+                const mwbLink = `<a href="https://hq.delhivery.com/p/list/1?type=waybill&q=${cleanMwb}" target="_blank" class="text-indigo-600 hover:underline flex items-center gap-1 font-mono">${displayId} <i data-lucide="external-link" class="w-3 h-3"></i></a>`; 
                 const wt = parseFloat(row['int_wt_iwt']) || 0;
                 
                 const tr = document.createElement('tr'); 
@@ -2086,10 +2104,47 @@
 
         function renderFinalDashboard() {
             const tbody = document.getElementById('dashboardBody');
+            const tfoot = document.getElementById('dashboardFooter');
             const cpkBody = document.getElementById('cpkTableBody');
-            tbody.innerHTML = ''; cpkBody.innerHTML = '';
             
-            // Get ALL Routes from Data, not just planned ones
+            tbody.innerHTML = ''; 
+            cpkBody.innerHTML = '';
+            tfoot.innerHTML = '';
+            
+            // UI Updates for Final View
+            const captureHeader = document.querySelector('#capture-target .border-b-2');
+            if(captureHeader) {
+                // Update content to remove Manager and ensure Date is kept
+                captureHeader.innerHTML = `
+                    <div class="flex justify-between items-end w-full">
+                        <div>
+                            <div class="text-2xl font-extrabold text-slate-900 tracking-tight uppercase">Hubli Dispatch Plan</div>
+                            <div class="text-sm text-slate-500 font-medium mt-1">Automated Load Plan</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Dispatch Plan Date</div>
+                            <div class="text-lg font-bold text-indigo-600">${SELECTED_PLAN_DATE || new Date().toLocaleDateString('en-GB')}</div>
+                        </div>
+                    </div>`;
+            }
+            
+            // Update Header Title
+            const costHeader = document.querySelector('#capture-target h4');
+            if(costHeader) costHeader.textContent = "Cost & Utilization Estimate";
+
+            // Add JPG Button if not present
+            const btnContainer = document.querySelector('#step-5 .flex.gap-3');
+            if(btnContainer && !document.getElementById('btnExportJpg')) {
+                const btn = document.createElement('button');
+                btn.id = 'btnExportJpg';
+                btn.onclick = downloadJPG;
+                btn.className = "bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium shadow-sm flex items-center gap-2";
+                btn.innerHTML = `<i data-lucide="image" class="w-4 h-4"></i> Export JPG`;
+                btnContainer.insertBefore(btn, btnContainer.firstChild); // Add before Export All
+                lucide.createIcons();
+            }
+
+            // --- DATA AGGREGATION ---
             const allRoutes = new Set();
             GLOBAL_DISPLAY_DATA.forEach(r => {
                 if(r.mapped_route && r.mapped_route !== 'NA' && r.mapped_route !== 'Unassigned') {
@@ -2098,53 +2153,79 @@
             });
             const sortedRoutes = Array.from(allRoutes).sort();
             
+            // Grand Totals
+            let grandStats = { availW:0, planW:0 };
+
             sortedRoutes.forEach(rt => {
-                // Calculate Totals for Route
-                let rtStats = { b2c:0, b2b:0, heavy:0, b2cW:0, b2bW:0, heavyW:0 };
+                // 1. Calculate Available (Floor)
+                let avail = { b2cW:0, b2bW:0, heavyW:0, totalW:0, b2cC:0, b2bC:0, heavyC:0, totalC:0 };
                 GLOBAL_DISPLAY_DATA.filter(r => r.mapped_route === rt).forEach(item => {
                     let cat = item.pdt || 'B2C';
                     let wt = parseFloat(item.int_wt_iwt)||0;
-                    if(cat.toLowerCase().includes('b2b')) { rtStats.b2b++; rtStats.b2bW+=wt; }
-                    else if(cat.toLowerCase().includes('heavy')) { rtStats.heavy++; rtStats.heavyW+=wt; }
-                    else { rtStats.b2c++; rtStats.b2cW+=wt; }
+                    if(cat.toLowerCase().includes('b2b')) { avail.b2bW+=wt; avail.b2bC++; }
+                    else if(cat.toLowerCase().includes('heavy')) { avail.heavyW+=wt; avail.heavyC++; }
+                    else { avail.b2cW+=wt; avail.b2cC++; }
+                    avail.totalW+=wt; avail.totalC++;
                 });
-                
-                const totalCnt = rtStats.b2c + rtStats.b2b + rtStats.heavy;
-                const totalWt = rtStats.b2cW + rtStats.b2bW + rtStats.heavyW;
 
+                // 2. Calculate Planned (Assigned to Vehicles)
+                let plan = { b2cW:0, b2bW:0, heavyW:0, totalW:0 };
                 const vehicles = DISPATCH_PLAN[rt] || [];
                 
+                vehicles.forEach(v => {
+                    v.load.forEach(id => {
+                        const item = GLOBAL_DISPLAY_DATA.find(r => r.Master_waybill == id);
+                        if(item) {
+                            let cat = item.pdt || 'B2C';
+                            let wt = parseFloat(item.int_wt_iwt)||0;
+                            if(cat.toLowerCase().includes('b2b')) plan.b2bW+=wt;
+                            else if(cat.toLowerCase().includes('heavy')) plan.heavyW+=wt;
+                            else plan.b2cW+=wt;
+                            plan.totalW+=wt;
+                        }
+                    });
+                });
+
+                grandStats.availW += avail.totalW;
+                grandStats.planW += plan.totalW;
+
+                // 3. Helper for AVTD Display
+                const getAvtdHtml = (p, a) => {
+                    if (a <= 0) return '';
+                    const pct = (p / a) * 100;
+                    let color = 'text-red-500';
+                    if (pct >= 95) color = 'text-green-600';
+                    else if (pct >= 80) color = 'text-amber-500';
+                    return `<div class="text-[9px] font-bold ${color}">${pct.toFixed(0)}%</div>`;
+                };
+
                 // UNPLANNED ROW
                 if(vehicles.length === 0) {
                     tbody.innerHTML += `
                     <tr class="border-b border-slate-100 bg-red-50/30">
                         <td class="p-3 border-r"><div class="font-bold text-xs text-red-600">${rt}</div><div class="text-[9px] text-red-400 italic">(UNPLANNED)</div></td>
-                        <td class="text-center text-xs opacity-50">${rtStats.b2c}</td><td class="text-center text-xs border-r opacity-50">${rtStats.b2cW.toFixed(0)}</td>
-                        <td class="text-center text-xs opacity-50">${rtStats.b2b}</td><td class="text-center text-xs border-r opacity-50">${rtStats.b2bW.toFixed(0)}</td>
-                        <td class="text-center text-xs opacity-50">${rtStats.heavy}</td><td class="text-center text-xs border-r opacity-50">${rtStats.heavyW.toFixed(0)}</td>
-                        <td class="text-center font-bold text-xs bg-slate-50">${totalCnt}</td><td class="text-center font-bold text-xs bg-slate-50">${totalWt.toFixed(0)}</td>
+                        <td class="text-center text-xs opacity-50">${avail.b2cC}</td><td class="text-center text-xs border-r opacity-50">${avail.b2cW.toFixed(0)} ${getAvtdHtml(0, avail.b2cW)}</td>
+                        <td class="text-center text-xs opacity-50">${avail.b2bC}</td><td class="text-center text-xs border-r opacity-50">${avail.b2bW.toFixed(0)} ${getAvtdHtml(0, avail.b2bW)}</td>
+                        <td class="text-center text-xs opacity-50">${avail.heavyC}</td><td class="text-center text-xs border-r opacity-50">${avail.heavyW.toFixed(0)} ${getAvtdHtml(0, avail.heavyW)}</td>
+                        <td class="text-center font-bold text-xs bg-slate-50">${avail.totalC}</td><td class="text-center font-bold text-xs bg-slate-50">${avail.totalW.toFixed(0)} ${getAvtdHtml(0, avail.totalW)}</td>
                     </tr>`;
-                    return; 
-                }
-                
-                // PLANNED ROWS
-                // We need to show totals against the route, and vehicle details
-                // To keep table clean, show 1 row per route, list vehicles
-                
-                const vList = vehicles.map(v => `${v.vNo}${v.runIndex>1?` (Run ${v.runIndex})`:''}`).join(', ');
+                } else {
+                    // PLANNED ROW
+                    const vList = vehicles.map(v => `<span class="bg-indigo-50 text-indigo-700 px-1 rounded">${v.vNo}${v.runIndex>1?`<sup>R${v.runIndex}</sup>`:''}</span>`).join(' ');
 
-                tbody.innerHTML += `
-                <tr class="border-b border-slate-100">
-                    <td class="p-3 border-r"><div class="font-bold text-xs">${rt}</div><div class="text-[9px] text-blue-600 font-medium">${vList}</div></td>
-                    <td class="text-center text-xs">${rtStats.b2c}</td><td class="text-center text-xs border-r">${rtStats.b2cW.toFixed(0)}</td>
-                    <td class="text-center text-xs">${rtStats.b2b}</td><td class="text-center text-xs border-r">${rtStats.b2bW.toFixed(0)}</td>
-                    <td class="text-center text-xs">${rtStats.heavy}</td><td class="text-center text-xs border-r">${rtStats.heavyW.toFixed(0)}</td>
-                    <td class="text-center font-bold text-xs bg-slate-50">${totalCnt}</td><td class="text-center font-bold text-xs bg-slate-50">${totalWt.toFixed(0)}</td>
-                </tr>`;
+                    tbody.innerHTML += `
+                    <tr class="border-b border-slate-100">
+                        <td class="p-3 border-r"><div class="font-bold text-xs text-slate-800">${rt}</div><div class="text-[10px] mt-1 flex flex-wrap gap-1">${vList}</div></td>
+                        <td class="text-center text-xs">${avail.b2cC}</td><td class="text-center text-xs border-r">${avail.b2cW.toFixed(0)} ${getAvtdHtml(plan.b2cW, avail.b2cW)}</td>
+                        <td class="text-center text-xs">${avail.b2bC}</td><td class="text-center text-xs border-r">${avail.b2bW.toFixed(0)} ${getAvtdHtml(plan.b2bW, avail.b2bW)}</td>
+                        <td class="text-center text-xs">${avail.heavyC}</td><td class="text-center text-xs border-r">${avail.heavyW.toFixed(0)} ${getAvtdHtml(plan.heavyW, avail.heavyW)}</td>
+                        <td class="text-center font-bold text-xs bg-slate-50">${avail.totalC}</td><td class="text-center font-bold text-xs bg-slate-50">${avail.totalW.toFixed(0)} ${getAvtdHtml(plan.totalW, avail.totalW)}</td>
+                    </tr>`;
+                }
 
                 // CPK Table Population
                 vehicles.forEach(v => {
-                    const vData = FLEET_MASTER.find(f => f.no === v.vNo);
+                    const vData = FLEET_MASTER.find(f => f.no === v.vNo) || { type:'-', size:'-', acpd:0 };
                     let cost = vData.acpd;
                     if(vData.type.toLowerCase() === 'carting') cost = (v.usedHrs/vData.hours)*vData.acpd;
                     
@@ -2160,22 +2241,171 @@
                     </tr>`;
                 });
             });
+
+            // Grand Total Footer
+            const grandAvtd = grandStats.availW > 0 ? (grandStats.planW / grandStats.availW) * 100 : 0;
+            let grandColor = 'text-red-400';
+            if (grandAvtd >= 95) grandColor = 'text-green-400';
+            else if (grandAvtd >= 80) grandColor = 'text-amber-400';
+
+            tfoot.innerHTML = `
+                <tr>
+                    <td colspan="7" class="p-3 text-right uppercase tracking-wider">Plan AVTD Estimate</td>
+                    <td colspan="2" class="p-3 text-center bg-slate-700 text-lg ${grandColor}">
+                        ${grandAvtd.toFixed(1)}%
+                        <div class="text-[9px] text-slate-400 font-normal normal-case">(${grandStats.planW.toFixed(0)} / ${grandStats.availW.toFixed(0)} kg)</div>
+                    </td>
+                </tr>
+            `;
         }
         
         function downloadReport() {
-            const summaryData = [];
-             const routes = Object.keys(DISPATCH_PLAN).sort();
-             routes.forEach(rt => {
-                 DISPATCH_PLAN[rt].forEach(v => {
-                      summaryData.push({ Route: rt, Vehicle: v.vNo, Run: v.runIndex, LoadCount: v.load.length });
-                 });
-             });
-             
-             const wb = XLSX.utils.book_new();
-             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryData), "Dispatch_Summary");
-             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(GLOBAL_DISPLAY_DATA), "Detailed_Data");
-             XLSX.writeFile(wb, "Final_Dispatch_Plan.xlsx");
+            // 1. Prepare Data Maps for Calculations
+            const routeStatsMap = {}; 
+            const shipmentAssignmentMap = {};
+
+            const allRoutes = new Set();
+            GLOBAL_DISPLAY_DATA.forEach(r => {
+                if(r.mapped_route && r.mapped_route !== 'NA' && r.mapped_route !== 'Unassigned') {
+                    allRoutes.add(r.mapped_route);
+                }
+            });
+            
+            // Prepare Stats Object
+            Array.from(allRoutes).sort().forEach(rt => {
+                routeStatsMap[rt] = { 
+                    avail: { b2c:0, b2b:0, heavy:0, total:0 },
+                    plan: { b2c:0, b2b:0, heavy:0, total:0 },
+                    counts: { b2c:0, b2b:0, heavy:0, total:0 } // LR counts (avail)
+                };
+            });
+
+            // Populate Available Stats
+            GLOBAL_DISPLAY_DATA.forEach(item => {
+                const rt = item.mapped_route;
+                if(routeStatsMap[rt]) {
+                    let cat = item.pdt || 'B2C';
+                    let wt = parseFloat(item.int_wt_iwt)||0;
+                    
+                    if(cat.toLowerCase().includes('b2b')) { 
+                        routeStatsMap[rt].avail.b2b+=wt; routeStatsMap[rt].counts.b2b++; 
+                    } else if(cat.toLowerCase().includes('heavy')) { 
+                        routeStatsMap[rt].avail.heavy+=wt; routeStatsMap[rt].counts.heavy++; 
+                    } else { 
+                        routeStatsMap[rt].avail.b2c+=wt; routeStatsMap[rt].counts.b2c++; 
+                    }
+                    routeStatsMap[rt].avail.total+=wt; routeStatsMap[rt].counts.total++;
+                }
+            });
+
+            // Populate Planned Stats
+            Object.keys(DISPATCH_PLAN).forEach(rt => {
+                if(routeStatsMap[rt]) {
+                    DISPATCH_PLAN[rt].forEach(v => {
+                        v.load.forEach(id => {
+                            const item = GLOBAL_DISPLAY_DATA.find(r => r.Master_waybill == id);
+                            if(item) {
+                                let cat = item.pdt || 'B2C';
+                                let wt = parseFloat(item.int_wt_iwt)||0;
+                                if(cat.toLowerCase().includes('b2b')) routeStatsMap[rt].plan.b2b+=wt;
+                                else if(cat.toLowerCase().includes('heavy')) routeStatsMap[rt].plan.heavy+=wt;
+                                else routeStatsMap[rt].plan.b2c+=wt;
+                                routeStatsMap[rt].plan.total+=wt;
+                            }
+                        });
+                    });
+                }
+            });
+
+            // --- SHEET 1: LOAD SUMMARY (Updated with AVTD) ---
+            const loadSummaryData = Object.keys(routeStatsMap).sort().map(rt => {
+                const s = routeStatsMap[rt];
+                const calcAvtd = (p, a) => a > 0 ? ((p/a)*100).toFixed(1) + '%' : '0%';
+                
+                return {
+                    "Route": rt,
+                    "B2C LR": s.counts.b2c, "B2C Wt": s.avail.b2c.toFixed(0), "B2C AVTD": calcAvtd(s.plan.b2c, s.avail.b2c),
+                    "B2B LR": s.counts.b2b, "B2B Wt": s.avail.b2b.toFixed(0), "B2B AVTD": calcAvtd(s.plan.b2b, s.avail.b2b),
+                    "Heavy LR": s.counts.heavy, "Heavy Wt": s.avail.heavy.toFixed(0), "Heavy AVTD": calcAvtd(s.plan.heavy, s.avail.heavy),
+                    "Total LR": s.counts.total, "Total Wt": s.avail.total.toFixed(0), "Route AVTD": calcAvtd(s.plan.total, s.avail.total),
+                    "Recommended Vehicle": getRecommendation(s.avail.total)
+                };
+            });
+
+            // --- SHEET 2: DISPATCH SUMMARY ---
+            const dispatchSummaryData = [];
+            Object.keys(DISPATCH_PLAN).sort().forEach(rt => {
+                const vehicles = DISPATCH_PLAN[rt];
+                vehicles.forEach(v => {
+                    const vData = FLEET_MASTER.find(f => f.no === v.vNo) || { transporter: '-', type: '-', size: '-', hours: 0, acpd: 0 };
+                    const isCarting = vData.type.toLowerCase() === 'carting';
+                    let cost = vData.acpd;
+                    let hrsRunsStr = `Run ${v.runIndex}`;
+                    if(isCarting) {
+                        const contractHrs = vData.hours || 12;
+                        const used = v.usedHrs || 0;
+                        cost = (used > 0) ? (vData.acpd * (used/contractHrs)) : 0;
+                        hrsRunsStr = `${used}/${contractHrs} Hrs`;
+                    }
+                    
+                    let vLoad = 0; 
+                    let vCount = 0;
+                    
+                    v.load.forEach(id => {
+                        const item = GLOBAL_DISPLAY_DATA.find(r => r.Master_waybill == id);
+                        if(item) {
+                            vLoad += parseFloat(item.int_wt_iwt)||0;
+                            vCount++;
+                            // Map for Sheet 3
+                            shipmentAssignmentMap[id] = {
+                                "D_Vehicle No": v.vNo,
+                                "D_Transporter": vData.transporter,
+                                "D_Vehicle Model": vData.size,
+                                "D_Contract": vData.type,
+                                "D_Route": rt,
+                                "D_Run/Hrs": hrsRunsStr,
+                                "D_Adj Cost": cost.toFixed(2),
+                                "D_Est CPK": (vLoad > 0 ? (cost/vLoad).toFixed(2) : 0)
+                            };
+                        }
+                    });
+                    
+                    const cpk = vLoad > 0 ? (cost/vLoad).toFixed(2) : 0;
+
+                    dispatchSummaryData.push({
+                        "Vehicle No": v.vNo,
+                        "Transporter Name": vData.transporter,
+                        "Vehicle Type": vData.size,
+                        "Contract Type": vData.type,
+                        "Route": rt,
+                        "LR/Box Count": vCount,
+                        "Load (Kg)": vLoad.toFixed(1),
+                        "ContractHrs/Runs": hrsRunsStr,
+                        "Adj. Cost": cost.toFixed(2),
+                        "Est CPK": cpk
+                    });
+                });
+            });
+
+            // --- SHEET 3: DETAILED DATA ---
+            const detailedData = GLOBAL_DISPLAY_DATA.map(item => {
+                const assign = shipmentAssignmentMap[item.Master_waybill] || {
+                    "D_Vehicle No": "", "D_Transporter": "", "D_Vehicle Model": "", 
+                    "D_Contract": "", "D_Route": "", "D_Run/Hrs": "", 
+                    "D_Adj Cost": "", "D_Est CPK": ""
+                };
+                return { ...item, ...assign };
+            });
+
+            // --- GENERATE EXCEL ---
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(loadSummaryData), "Load_Summary");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dispatchSummaryData), "Dispatch_Summary");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detailedData), "Detailed_Data");
+            
+            XLSX.writeFile(wb, `Hubli_Dispatch_Plan_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
+
         function downloadJPG() {
             const captureElement = document.querySelector('#capture-target'); if (!captureElement) return; captureElement.classList.add('capture-mode');
             html2canvas(captureElement, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
@@ -2221,4 +2451,4 @@
         }
     </script>
 </body>
-    </html>
+</html>
