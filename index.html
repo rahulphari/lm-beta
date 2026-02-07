@@ -369,7 +369,11 @@
                         </div>
                     </div>
                 </div>
-                <div class="flex gap-3">
+                <div class="flex flex-wrap gap-3 items-center">
+                     <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 bg-white border border-slate-200 px-3 py-2 rounded-lg shadow-sm">
+                        <input type="checkbox" id="autoLoadToggle" class="custom-checkbox rounded w-4 h-4" checked>
+                        Auto-open Load Builder
+                    </label>
                      <button onclick="toggleFinalView()" id="viewToggleBtn" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium shadow-sm flex items-center gap-2">
                         <i data-lucide="eye" class="w-4 h-4"></i> View Final Plan
                     </button>
@@ -381,9 +385,50 @@
 
             <!-- PLANNING VIEW (DRAFT TABLE - V39 VISUALS) -->
             <div id="planningView" class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-                <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
+                <div class="bg-slate-50 p-4 border-b border-slate-200 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
                     <h3 class="font-bold text-slate-700 text-sm uppercase tracking-wide">Draft Dispatch Plan</h3>
-                    <div id="fleetStats" class="flex gap-4 text-xs font-mono text-slate-500"></div>
+                    <div class="flex flex-wrap items-center gap-4 text-xs">
+                        <div id="fleetStats" class="flex gap-4 font-mono text-slate-500"></div>
+                        <div class="flex items-center gap-2 text-slate-500">
+                            <span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full font-semibold">
+                                <i data-lucide="wand-2" class="w-3 h-3"></i> Tip: Use “Assign Fleet” → Load
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-4 py-3 border-b border-slate-200 bg-white/70">
+                    <div class="grid md:grid-cols-3 gap-3 text-xs text-slate-600">
+                        <div class="flex items-start gap-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                            <div class="bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px]">1</div>
+                            <div>
+                                <div class="font-semibold text-slate-700">Assign Fleet</div>
+                                <div class="text-slate-500">Pick vehicles per route using the recommended load.</div>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                            <div class="bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px]">2</div>
+                            <div>
+                                <div class="font-semibold text-slate-700">Load Builder</div>
+                                <div class="text-slate-500">Use Smart Groups (+/-) to bulk load faster.</div>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                            <div class="bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px]">3</div>
+                            <div>
+                                <div class="font-semibold text-slate-700">Finalize</div>
+                                <div class="text-slate-500">Review CPK and export when ready.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="assignmentCoach" class="hidden mt-3 p-3 bg-indigo-50 border border-indigo-200 rounded-lg flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                        <div class="text-sm text-indigo-900">
+                            <span class="font-bold">Next:</span>
+                            <span id="assignmentCoachText">Load newly assigned vehicle.</span>
+                        </div>
+                        <button onclick="openLoadFromCoach()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm">
+                            Open Load Builder
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="overflow-x-auto custom-scroll">
@@ -629,7 +674,11 @@
 
                     <!-- SMART LOAD GROUPS -->
                     <div class="mb-6">
-                        <h4 class="text-xs font-bold text-slate-500 uppercase mb-3 border-b pb-1">Smart Load Groups</h4>
+                        <h4 class="text-xs font-bold text-slate-500 uppercase mb-2 border-b pb-1">Smart Load Groups</h4>
+                        <div class="text-[10px] text-slate-500 mb-2 flex items-center gap-2">
+                            <span class="bg-white border border-slate-200 px-2 py-1 rounded-full">+</span> add all
+                            <span class="bg-white border border-slate-200 px-2 py-1 rounded-full">−</span> remove all
+                        </div>
                         <div class="space-y-2 overflow-y-auto max-h-[30vh] custom-scroll pr-1" id="lamBulkGroups">
                              <!-- Groups Injected JS -->
                         </div>
@@ -656,9 +705,18 @@
 
                 <!-- RIGHT: INDIVIDUAL LIST -->
                 <div class="w-7/12 flex flex-col bg-white">
-                    <div class="p-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 flex justify-between items-center shadow-sm">
-                        <span>Individual Shipments</span>
-                        <span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full" id="lamSelectionCount">0 selected</span>
+                    <div class="p-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-sm">
+                        <div class="flex items-center gap-2">
+                            <span>Individual Shipments</span>
+                            <span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full" id="lamSelectionCount">0 selected</span>
+                        </div>
+                        <div class="flex items-center gap-2 w-full md:w-auto">
+                            <div class="relative w-full md:w-64">
+                                <input type="text" id="lamSearchInput" class="w-full border border-slate-300 rounded-lg py-1.5 px-3 pl-8 text-xs focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Search waybill, client, pin..." oninput="handleLamSearch()">
+                                <i data-lucide="search" class="absolute left-2.5 top-2.5 w-3 h-3 text-slate-400"></i>
+                            </div>
+                            <button onclick="resetLamSearch()" class="text-xs text-slate-500 hover:text-indigo-600">Reset</button>
+                        </div>
                     </div>
                     <div class="flex-grow overflow-y-auto custom-scroll p-0">
                         <table class="w-full text-xs text-left">
@@ -798,6 +856,9 @@
         let WEATHER_ALERTS = [];
         let currentModalTarget = null;
         let CURRENT_ROUTE_TARGET = "";
+        let LAST_ASSIGNMENT = null;
+        let LAM_SEARCH_TERM = "";
+        let DISPATCH_STATE = {};
 
         // --- INIT ---
         lucide.createIcons();
@@ -856,12 +917,12 @@
             try {
                 const fleetData = await fetchCsv(SHEET_URLS.FLEET);
                 FLEET_MASTER = fleetData.map(r => ({
-                    transporter: r['Transporter'],
+                    transporter: r['Transporter'] || '-',
                     no: r['Vehicle No']?.trim().toUpperCase(),
-                    size: r['Vehicle Size'],
+                    size: r['Vehicle Size'] || '-',
                     hours: parseFloat(r['Hours']) || 0,
                     cost: parseFloat(r['Contract Cost']) || 0,
-                    type: r['Type']?.trim(), 
+                    type: r['Type']?.trim() || '-', 
                     acpd: parseFloat(r['ACPD']) || 0
                 })).filter(v => v.no);
                 DATA_FEED_STATUS.fleet = FLEET_MASTER.length > 0;
@@ -1060,7 +1121,7 @@
                     }
                  }
             });
-            UNIQUE_PINS = uniquePins; 
+            UNIQUE_PINCODES = uniquePins; 
             
             // Update Stats
             const totalWt = GLOBAL_PENDING_DATA.reduce((s,r) => s + (parseFloat(r['int_wt_iwt'])||0), 0);
@@ -1482,11 +1543,12 @@
             tbody.innerHTML = '';
             
             const lowerSearch = search.toLowerCase();
-            const filteredFleet = FLEET_MASTER.filter(v => 
-                v.no.toLowerCase().includes(lowerSearch) || 
-                v.transporter.toLowerCase().includes(lowerSearch) ||
-                v.type.toLowerCase().includes(lowerSearch)
-            );
+            const filteredFleet = FLEET_MASTER.filter(v => {
+                const vNo = (v.no || '').toLowerCase();
+                const transporter = (v.transporter || '').toLowerCase();
+                const type = (v.type || '').toLowerCase();
+                return vNo.includes(lowerSearch) || transporter.includes(lowerSearch) || type.includes(lowerSearch);
+            });
 
             if (filteredFleet.length === 0) {
                  tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">No vehicles found.</td></tr>`;
@@ -1618,6 +1680,7 @@
              });
              updateFleetStats();
              lucide.createIcons();
+             updateAssignmentCoach();
         }
 
         // --- NEW: OPEN ROUTE STATS DETAILS ---
@@ -1706,7 +1769,7 @@
             const target = norm(sizeStr);
             
             // 1. Try exact match on raw
-            let match = VEHICLE_STANDARDS.find(s => s.type.toLowerCase() === sizeStr.toLowerCase());
+            let match = VEHICLE_STANDARDS.find(s => (s.type || '').toLowerCase() === sizeStr.toLowerCase());
             if(match) return match.wt;
 
             // 2. Try normalized match
@@ -1723,7 +1786,7 @@
         function renderAssignedVehicle(route, idx, alloc) {
             const vData = FLEET_MASTER.find(f => f.no === alloc.vNo);
             if(!vData) return ''; 
-            const isCarting = vData.type.toLowerCase() === 'carting';
+            const isCarting = (vData.type || '').toLowerCase() === 'carting';
             
             let currentLoad = 0;
             alloc.load.forEach(mwb => {
@@ -1807,6 +1870,30 @@
             lucide.createIcons();
         }
 
+        function isAutoLoadEnabled() {
+            const toggle = document.getElementById('autoLoadToggle');
+            return toggle ? toggle.checked : false;
+        }
+
+        function updateAssignmentCoach() {
+            const coach = document.getElementById('assignmentCoach');
+            if(!coach || !LAST_ASSIGNMENT) return;
+            const route = LAST_ASSIGNMENT.route;
+            const idx = LAST_ASSIGNMENT.idx;
+            const vehicle = DISPATCH_PLAN[route]?.[idx];
+            if(!vehicle) return;
+            const text = document.getElementById('assignmentCoachText');
+            if(text) {
+                text.textContent = `Load ${vehicle.vNo} (${route}) to keep utilization optimal.`;
+            }
+            coach.classList.remove('hidden');
+        }
+
+        function openLoadFromCoach() {
+            if(!LAST_ASSIGNMENT) return;
+            openLoadModal(LAST_ASSIGNMENT.route, LAST_ASSIGNMENT.idx);
+        }
+
         // --- DISPATCH ACTIONS ---
         function addVehicleToRoute(route, vNo) {
             if(!vNo) return;
@@ -1816,7 +1903,12 @@
             const currentRuns = DISPATCH_PLAN[route].filter(a => a.vNo === vNo).length;
             
             DISPATCH_PLAN[route].push({ vNo: vNo, load: [], runIndex: currentRuns + 1, usedHrs: 0 }); 
+            LAST_ASSIGNMENT = { route, idx: DISPATCH_PLAN[route].length - 1 };
             renderPlanningBoard();
+            updateAssignmentCoach();
+            if(isAutoLoadEnabled()) {
+                openLoadModal(route, LAST_ASSIGNMENT.idx);
+            }
         }
         function removeVehicle(route, idx) {
             DISPATCH_PLAN[route].splice(idx, 1);
@@ -1846,6 +1938,10 @@
             CUR_MODAL = { route, idx };
             const vehicle = DISPATCH_PLAN[route][idx];
             const vData = FLEET_MASTER.find(f => f.no === vehicle.vNo);
+            if(!vData) {
+                alert("Fleet data missing for this vehicle. Please refresh the fleet feed.");
+                return;
+            }
             
             safeSetText('lamTitle', `Loading ${vData.no} ${vehicle.runIndex > 1 ? '(Run ' + vehicle.runIndex + ')' : ''}`);
             
@@ -1860,11 +1956,11 @@
                 </div>
             `;
             
-            const isCarting = vData.type.toLowerCase() === 'carting';
+            const isCarting = (vData.type || '').toLowerCase() === 'carting';
             const cs = document.getElementById('cartingSettings');
             if(isCarting) {
                 cs.classList.remove('hidden');
-                safeSetText('contractHrsVal', vData.hours); // Use safeSetText
+                safeSetText('contractHrsVal', vData.hours || 12); // Use safeSetText
                 safeSetText('usedHrsVal', vehicle.usedHrs || 0); // Use safeSetText
                 document.getElementById('lamHoursSlider').value = vehicle.usedHrs || 0;
             } else {
@@ -1873,6 +1969,9 @@
             
             // NEW: Get smart groups
             const routeItems = GLOBAL_DISPLAY_DATA.filter(r => r.mapped_route === route);
+            LAM_SEARCH_TERM = "";
+            const searchInput = document.getElementById('lamSearchInput');
+            if(searchInput) searchInput.value = "";
             // Group by Pincode
             const pinGroups = {};
             routeItems.forEach(i => {
@@ -1901,6 +2000,16 @@
             document.getElementById('loadAssignmentModal').classList.remove('hidden');
         }
 
+        function sanitizeGroupId(value) {
+            return value.toString().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        }
+
+        function getGroupToggleIcon(isActive) {
+            return isActive
+                ? '<i data-lucide="minus" class="w-3 h-3 text-red-500"></i>'
+                : '<i data-lucide="plus" class="w-3 h-3 text-indigo-600"></i>';
+        }
+
         async function renderSmartGroups(catGroups, pinGroups) {
             const container = document.getElementById('lamBulkGroups');
             container.innerHTML = '';
@@ -1908,15 +2017,18 @@
             // Render Categories
             for(const [cat, data] of Object.entries(catGroups)) {
                 if(data.c === 0) continue;
+                const groupId = `cat-${sanitizeGroupId(cat)}`;
                 // Check if all selected?
                 // Logic: Button toggles selection
                 container.innerHTML += `
-                    <div class="bg-white border border-slate-200 rounded p-2 flex items-center justify-between hover:bg-slate-50 cursor-pointer" onclick="toggleBulkGroup('${cat}', '${data.ids.join(',')}')">
+                    <div class="bg-white border border-slate-200 rounded p-2 flex items-center justify-between hover:bg-slate-50 cursor-pointer" onclick="toggleBulkGroup('${cat}', '${data.ids.join(',')}', '${groupId}')">
                         <div>
                             <div class="text-xs font-bold text-slate-700">${cat}</div>
                             <div class="text-[10px] text-slate-500">${data.c} pkts • ${data.w.toFixed(0)}kg</div>
                         </div>
-                        <i data-lucide="plus-circle" class="w-4 h-4 text-indigo-600"></i>
+                        <button class="w-7 h-7 flex items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm" id="toggle-${groupId}" data-group="${groupId}" data-mode="add" data-ids="${data.ids.join(',')}">
+                            ${getGroupToggleIcon(false)}
+                        </button>
                     </div>`;
             }
             
@@ -1924,7 +2036,7 @@
             container.innerHTML += `<div class="text-[10px] font-bold text-slate-400 uppercase mt-4 mb-2">By Pincode</div>`;
             
             for(const [pin, data] of Object.entries(pinGroups)) {
-                const divId = `grp-${pin}`;
+                const groupId = `pin-${sanitizeGroupId(pin)}`;
                 // Fetch location async
                 fetch(`https://api.postalpincode.in/pincode/${pin}`)
                     .then(res => res.json())
@@ -1935,20 +2047,23 @@
                     });
 
                 container.innerHTML += `
-                    <div class="bg-white border border-slate-200 rounded p-2 flex items-center justify-between hover:bg-slate-50 cursor-pointer" onclick="toggleBulkGroup('PIN', '${data.ids.join(',')}')">
+                    <div class="bg-white border border-slate-200 rounded p-2 flex items-center justify-between hover:bg-slate-50 cursor-pointer" onclick="toggleBulkGroup('PIN', '${data.ids.join(',')}', '${groupId}')">
                         <div>
                             <div class="text-xs font-bold text-slate-700 flex items-center gap-1">
                                 ${pin} <span class="font-normal text-slate-400" id="loc-${pin}">...</span>
                             </div>
                             <div class="text-[10px] text-slate-500">${data.count} pkts • ${data.wt.toFixed(0)}kg</div>
                         </div>
-                        <i data-lucide="map-pin" class="w-4 h-4 text-slate-400"></i>
+                        <button class="w-7 h-7 flex items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm" id="toggle-${groupId}" data-group="${groupId}" data-mode="add" data-ids="${data.ids.join(',')}">
+                            ${getGroupToggleIcon(false)}
+                        </button>
                     </div>`;
             }
             lucide.createIcons();
+            updateSmartGroupToggleStates();
         }
 
-        function toggleBulkGroup(type, idsStr) {
+        function toggleBulkGroup(type, idsStr, groupId) {
             const ids = idsStr.split(',');
             const checks = Array.from(document.querySelectorAll('.lam-check'));
             
@@ -1967,12 +2082,37 @@
             
             updateLamStats();
         }
+
+        function updateSmartGroupToggleStates() {
+            const buttons = document.querySelectorAll('[id^="toggle-"]');
+            buttons.forEach(btn => {
+                const idsStr = btn.dataset.ids;
+                if(!idsStr) return;
+                const ids = idsStr.split(',');
+                const checks = Array.from(document.querySelectorAll('.lam-check'));
+                const targets = checks.filter(c => ids.includes(c.value));
+                if(targets.length === 0) return;
+                const allChecked = targets.every(c => c.checked);
+                btn.dataset.mode = allChecked ? 'remove' : 'add';
+                btn.innerHTML = getGroupToggleIcon(allChecked);
+            });
+            lucide.createIcons();
+        }
         
         function renderLoadTable() {
             const tbody = document.getElementById('lamTableBody');
             tbody.innerHTML = '';
             
-            const allItems = GLOBAL_DISPLAY_DATA.filter(r => r.mapped_route === CUR_MODAL.route);
+            const term = (LAM_SEARCH_TERM || '').toLowerCase();
+            let allItems = GLOBAL_DISPLAY_DATA.filter(r => r.mapped_route === CUR_MODAL.route);
+            if(term) {
+                allItems = allItems.filter(item => {
+                    const wb = (item.Master_waybill || '').toString().toLowerCase();
+                    const cl = (item.cl || '').toString().toLowerCase();
+                    const pin = (item.pin || '').toString().toLowerCase();
+                    return wb.includes(term) || cl.includes(term) || pin.includes(term);
+                });
+            }
             
             // UPDATED: Sort by Weight (Heaviest to Lightest)
             allItems.sort((a, b) => (parseFloat(b.int_wt_iwt) || 0) - (parseFloat(a.int_wt_iwt) || 0));
@@ -1984,7 +2124,7 @@
             });
             const currentAssigned = new Set(DISPATCH_PLAN[CUR_MODAL.route][CUR_MODAL.idx].load);
 
-            let count = 0;
+            const selectedCount = currentAssigned.size;
             allItems.forEach(item => {
                 const id = item.Master_waybill;
                 const isMine = currentAssigned.has(id);
@@ -1997,9 +2137,20 @@
                 
                 tr.innerHTML = `<td class="p-2">${check}</td><td class="p-2 font-mono">${id}</td><td class="p-2 truncate max-w-[100px]" title="${item.cl}">${item.cl||'-'}</td><td class="p-2">${item.pin}</td><td class="p-2 text-right">${parseFloat(item.int_wt_iwt).toFixed(1)}</td>`;
                 tbody.appendChild(tr);
-                if(isMine) count++;
             });
-            safeSetText('lamSelectionCount', `${count} selected`);
+            safeSetText('lamSelectionCount', `${selectedCount} selected`);
+        }
+
+        function handleLamSearch() {
+            LAM_SEARCH_TERM = document.getElementById('lamSearchInput').value || '';
+            renderLoadTable();
+        }
+
+        function resetLamSearch() {
+            LAM_SEARCH_TERM = "";
+            const input = document.getElementById('lamSearchInput');
+            if(input) input.value = "";
+            renderLoadTable();
         }
 
         function updateLamStats() {
@@ -2014,12 +2165,14 @@
             safeSetText('lamCurLoad', `${wt.toFixed(1)} kg`);
             safeSetText('lamSelectionCount', `${newLoad.length} selected`);
             updateLamCost(); 
+            updateSmartGroupToggleStates();
         }
 
         function updateLamCost() {
             const vehicle = DISPATCH_PLAN[CUR_MODAL.route][CUR_MODAL.idx];
             const vData = FLEET_MASTER.find(f => f.no === vehicle.vNo);
-            const isCarting = vData.type.toLowerCase() === 'carting';
+            if(!vData) return;
+            const isCarting = (vData.type || '').toLowerCase() === 'carting';
             
             // Robust Capacity Lookup
             const maxCap = getVehicleCapacity(vData.size);
@@ -2032,7 +2185,8 @@
             
             let cost = vData.acpd;
             if(isCarting) {
-                cost = (vehicle.usedHrs > 0) ? (vData.acpd * (vehicle.usedHrs / vData.hours)) : 0;
+                const contractHours = vData.hours || 12;
+                cost = (vehicle.usedHrs > 0) ? (vData.acpd * (vehicle.usedHrs / contractHours)) : 0;
             }
             
             let wt = 0;
@@ -2239,7 +2393,10 @@
                 vehicles.forEach(v => {
                     const vData = FLEET_MASTER.find(f => f.no === v.vNo) || { type:'-', size:'-', acpd:0 };
                     let cost = vData.acpd;
-                    if(vData.type.toLowerCase() === 'carting') cost = (v.usedHrs/vData.hours)*vData.acpd;
+                    if((vData.type || '').toLowerCase() === 'carting') {
+                        const contractHours = vData.hours || 12;
+                        cost = (v.usedHrs / contractHours) * vData.acpd;
+                    }
                     
                     let load = 0; v.load.forEach(id => { const i = GLOBAL_DISPLAY_DATA.find(r => r.Master_waybill == id); if(i) load += parseFloat(i.int_wt_iwt)||0; });
                     const cpk = load > 0 ? (cost/load).toFixed(2) : 0;
@@ -2359,7 +2516,7 @@
                 const vehicles = DISPATCH_PLAN[rt];
                 vehicles.forEach(v => {
                     const vData = FLEET_MASTER.find(f => f.no === v.vNo) || { transporter: '-', type: '-', size: '-', hours: 0, acpd: 0 };
-                    const isCarting = vData.type.toLowerCase() === 'carting';
+                    const isCarting = (vData.type || '').toLowerCase() === 'carting';
                     let cost = vData.acpd;
                     let hrsRunsStr = `Run ${v.runIndex}`;
                     if(isCarting) {
