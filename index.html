@@ -798,6 +798,7 @@
         let WEATHER_ALERTS = [];
         let currentModalTarget = null;
         let CURRENT_ROUTE_TARGET = "";
+        let DISPATCH_STATE = {};
 
         // --- INIT ---
         lucide.createIcons();
@@ -856,12 +857,12 @@
             try {
                 const fleetData = await fetchCsv(SHEET_URLS.FLEET);
                 FLEET_MASTER = fleetData.map(r => ({
-                    transporter: r['Transporter'],
+                    transporter: r['Transporter'] || '-',
                     no: r['Vehicle No']?.trim().toUpperCase(),
-                    size: r['Vehicle Size'],
+                    size: r['Vehicle Size'] || '-',
                     hours: parseFloat(r['Hours']) || 0,
                     cost: parseFloat(r['Contract Cost']) || 0,
-                    type: r['Type']?.trim(), 
+                    type: r['Type']?.trim() || '-', 
                     acpd: parseFloat(r['ACPD']) || 0
                 })).filter(v => v.no);
                 DATA_FEED_STATUS.fleet = FLEET_MASTER.length > 0;
@@ -1060,7 +1061,7 @@
                     }
                  }
             });
-            UNIQUE_PINS = uniquePins; 
+            UNIQUE_PINCODES = uniquePins; 
             
             // Update Stats
             const totalWt = GLOBAL_PENDING_DATA.reduce((s,r) => s + (parseFloat(r['int_wt_iwt'])||0), 0);
@@ -1482,11 +1483,12 @@
             tbody.innerHTML = '';
             
             const lowerSearch = search.toLowerCase();
-            const filteredFleet = FLEET_MASTER.filter(v => 
-                v.no.toLowerCase().includes(lowerSearch) || 
-                v.transporter.toLowerCase().includes(lowerSearch) ||
-                v.type.toLowerCase().includes(lowerSearch)
-            );
+            const filteredFleet = FLEET_MASTER.filter(v => {
+                const vNo = (v.no || '').toLowerCase();
+                const transporter = (v.transporter || '').toLowerCase();
+                const type = (v.type || '').toLowerCase();
+                return vNo.includes(lowerSearch) || transporter.includes(lowerSearch) || type.includes(lowerSearch);
+            });
 
             if (filteredFleet.length === 0) {
                  tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">No vehicles found.</td></tr>`;
@@ -1706,7 +1708,7 @@
             const target = norm(sizeStr);
             
             // 1. Try exact match on raw
-            let match = VEHICLE_STANDARDS.find(s => s.type.toLowerCase() === sizeStr.toLowerCase());
+            let match = VEHICLE_STANDARDS.find(s => (s.type || '').toLowerCase() === sizeStr.toLowerCase());
             if(match) return match.wt;
 
             // 2. Try normalized match
@@ -1723,7 +1725,7 @@
         function renderAssignedVehicle(route, idx, alloc) {
             const vData = FLEET_MASTER.find(f => f.no === alloc.vNo);
             if(!vData) return ''; 
-            const isCarting = vData.type.toLowerCase() === 'carting';
+            const isCarting = (vData.type || '').toLowerCase() === 'carting';
             
             let currentLoad = 0;
             alloc.load.forEach(mwb => {
@@ -1846,6 +1848,10 @@
             CUR_MODAL = { route, idx };
             const vehicle = DISPATCH_PLAN[route][idx];
             const vData = FLEET_MASTER.find(f => f.no === vehicle.vNo);
+            if(!vData) {
+                alert("Fleet data missing for this vehicle. Please refresh the fleet feed.");
+                return;
+            }
             
             safeSetText('lamTitle', `Loading ${vData.no} ${vehicle.runIndex > 1 ? '(Run ' + vehicle.runIndex + ')' : ''}`);
             
@@ -1860,11 +1866,11 @@
                 </div>
             `;
             
-            const isCarting = vData.type.toLowerCase() === 'carting';
+            const isCarting = (vData.type || '').toLowerCase() === 'carting';
             const cs = document.getElementById('cartingSettings');
             if(isCarting) {
                 cs.classList.remove('hidden');
-                safeSetText('contractHrsVal', vData.hours); // Use safeSetText
+                safeSetText('contractHrsVal', vData.hours || 12); // Use safeSetText
                 safeSetText('usedHrsVal', vehicle.usedHrs || 0); // Use safeSetText
                 document.getElementById('lamHoursSlider').value = vehicle.usedHrs || 0;
             } else {
@@ -2019,7 +2025,8 @@
         function updateLamCost() {
             const vehicle = DISPATCH_PLAN[CUR_MODAL.route][CUR_MODAL.idx];
             const vData = FLEET_MASTER.find(f => f.no === vehicle.vNo);
-            const isCarting = vData.type.toLowerCase() === 'carting';
+            if(!vData) return;
+            const isCarting = (vData.type || '').toLowerCase() === 'carting';
             
             // Robust Capacity Lookup
             const maxCap = getVehicleCapacity(vData.size);
@@ -2032,7 +2039,8 @@
             
             let cost = vData.acpd;
             if(isCarting) {
-                cost = (vehicle.usedHrs > 0) ? (vData.acpd * (vehicle.usedHrs / vData.hours)) : 0;
+                const contractHours = vData.hours || 12;
+                cost = (vehicle.usedHrs > 0) ? (vData.acpd * (vehicle.usedHrs / contractHours)) : 0;
             }
             
             let wt = 0;
@@ -2239,7 +2247,10 @@
                 vehicles.forEach(v => {
                     const vData = FLEET_MASTER.find(f => f.no === v.vNo) || { type:'-', size:'-', acpd:0 };
                     let cost = vData.acpd;
-                    if(vData.type.toLowerCase() === 'carting') cost = (v.usedHrs/vData.hours)*vData.acpd;
+                    if((vData.type || '').toLowerCase() === 'carting') {
+                        const contractHours = vData.hours || 12;
+                        cost = (v.usedHrs / contractHours) * vData.acpd;
+                    }
                     
                     let load = 0; v.load.forEach(id => { const i = GLOBAL_DISPLAY_DATA.find(r => r.Master_waybill == id); if(i) load += parseFloat(i.int_wt_iwt)||0; });
                     const cpk = load > 0 ? (cost/load).toFixed(2) : 0;
@@ -2359,7 +2370,7 @@
                 const vehicles = DISPATCH_PLAN[rt];
                 vehicles.forEach(v => {
                     const vData = FLEET_MASTER.find(f => f.no === v.vNo) || { transporter: '-', type: '-', size: '-', hours: 0, acpd: 0 };
-                    const isCarting = vData.type.toLowerCase() === 'carting';
+                    const isCarting = (vData.type || '').toLowerCase() === 'carting';
                     let cost = vData.acpd;
                     let hrsRunsStr = `Run ${v.runIndex}`;
                     if(isCarting) {
