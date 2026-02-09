@@ -96,6 +96,21 @@
             background-color: #e0e7ff !important; /* indigo-100 */
             color: #3730a3 !important; /* indigo-800 */
         }
+
+        .glow-button {
+            box-shadow: 0 0 0 rgba(99, 102, 241, 0.4);
+            animation: pulseGlow 2s infinite;
+        }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.45); }
+            70% { box-shadow: 0 0 0 12px rgba(99, 102, 241, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+        }
+
+        .guide-pill {
+            background: linear-gradient(135deg, #eef2ff, #f8fafc);
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
@@ -161,7 +176,11 @@
                     <i data-lucide="upload-cloud" class="w-8 h-8"></i>
                 </div>
                 <h2 class="text-2xl font-bold text-slate-900 mb-2">Upload Query Data</h2>
-                <p class="text-slate-500 mb-8">Upload latest ZIP file from scheduled Query.</p>
+                <p class="text-slate-500 mb-2">Upload latest ZIP file from scheduled Query.</p>
+                <p class="text-sm text-slate-500 mb-6">
+                    Need the latest file? Use this quick link to open Gmail search and download the newest result:
+                    <a class="text-indigo-600 font-semibold hover:underline" href="https://mail.google.com/mail/u/0/#search/%22LM+planning+Hubli+Version+2%3A+Scheduled+query+results+available%22" target="_blank" rel="noreferrer">Open Gmail Search →</a>
+                </p>
                 
                 <div class="relative group cursor-pointer">
                     <div class="border-2 border-dashed border-slate-300 rounded-xl p-12 transition-all group-hover:border-blue-500 group-hover:bg-blue-50/50">
@@ -173,6 +192,15 @@
                 </div>
                 
                 <div id="fileStatus" class="mt-6 text-sm min-h-[20px] text-slate-400 transition-all"></div>
+                <div class="mt-6 text-left bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-600">
+                    <div class="font-semibold text-slate-700 mb-2">Quick Start (Guided for Non‑Tech Users)</div>
+                    <ol class="list-decimal list-inside space-y-1">
+                        <li>Download the ZIP from the Gmail link above.</li>
+                        <li>Click <span class="font-semibold">Select ZIP File</span> and choose the file.</li>
+                        <li>Wait for the file name to appear below, then move to the next step.</li>
+                        <li>Follow the green tips on every page — they are your checklist from start to finish.</li>
+                    </ol>
+                </div>
             </div>
         </div>
 
@@ -187,6 +215,10 @@
                     <i data-lucide="eye" class="w-3 h-3"></i>
                     View Excluded Data
                 </button>
+            </div>
+            <div class="mb-6 bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm text-emerald-800">
+                <div class="font-semibold mb-1">Friendly Tip</div>
+                <p>Start here to confirm the floor load looks correct. If the count feels low or high, open the excluded list and verify if any rows should be kept out.</p>
             </div>
 
             <!-- Stats Grid (Reduced to 2 columns) -->
@@ -247,6 +279,10 @@
                     <h2 class="text-2xl font-bold text-slate-900">Automated Mapping</h2>
                     <p class="text-slate-500">Data loaded from cloud. Review and handle exceptions.</p>
                 </div>
+            </div>
+            <div class="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+                <div class="font-semibold mb-1">Guided Step</div>
+                <p>If the system asks for manual mapping, choose the best route for each pin, then hit <span class="font-semibold">Save &amp; Proceed</span>. No worries — you can always edit later.</p>
             </div>
 
             <div class="bg-white rounded-xl shadow-lg border border-slate-200 p-8">
@@ -322,6 +358,14 @@
                     </button>
                 </div>
             </div>
+            <div class="mb-5 bg-indigo-50 border border-indigo-200 rounded-xl p-4 text-sm text-indigo-800">
+                <div class="font-semibold mb-1">How to pick vehicles (Quick Guide)</div>
+                <ul class="list-disc list-inside space-y-1">
+                    <li>Click a <span class="font-semibold">Trip ID</span> to open Midmile and manually verify if it arrives before the AVTD cut‑off tomorrow morning.</li>
+                    <li>This manual method is slower. The faster way is the <span class="font-semibold">Paste List</span> button — paste raw vehicle numbers from Midmile.</li>
+                    <li>Tip: Need help? Contact <span class="font-semibold">Vinay</span> for clarification.</li>
+                </ul>
+            </div>
 
             <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden flex flex-col h-[70vh]">
                 <!-- Toolbar -->
@@ -345,7 +389,7 @@
                     <div class="col-span-2">Origin</div>
                     <div class="col-span-2">Type</div>
                     <div class="col-span-2">Route Type</div>
-                    <div class="col-span-1 text-right">LM LOAD (Boxes / Kg)</div>
+                    <div class="col-span-1 text-right">LM LOAD (MWNs / Kg)</div>
                 </div>
 
                 <!-- Table Body -->
@@ -377,9 +421,27 @@
                      <button onclick="toggleFinalView()" id="viewToggleBtn" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium shadow-sm flex items-center gap-2">
                         <i data-lucide="eye" class="w-4 h-4"></i> View Final Plan
                     </button>
-                     <button onclick="downloadReport()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition-transform active:scale-95">
+                    <button onclick="downloadReport()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition-transform active:scale-95">
                         <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Export All
                     </button>
+                </div>
+            </div>
+            <div class="mb-6 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <div>
+                        <div class="text-xs uppercase tracking-widest text-slate-400">Dashboard</div>
+                        <div class="text-lg font-semibold text-slate-800">Guided Help &amp; Logic Summary (Multi‑Language)</div>
+                        <p class="text-sm text-slate-500">Use these short guides for a friendly, step‑by‑step walkthrough and the platform logic summary.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <a class="guide-pill px-3 py-1.5 text-xs font-semibold text-indigo-700 rounded-full border border-indigo-100 hover:bg-indigo-50" href="https://support.delhivery.com/?lang=en" target="_blank" rel="noreferrer">User Guide (English)</a>
+                        <a class="guide-pill px-3 py-1.5 text-xs font-semibold text-indigo-700 rounded-full border border-indigo-100 hover:bg-indigo-50" href="https://support.delhivery.com/?lang=hi" target="_blank" rel="noreferrer">यूज़र गाइड (Hindi)</a>
+                        <a class="guide-pill px-3 py-1.5 text-xs font-semibold text-indigo-700 rounded-full border border-indigo-100 hover:bg-indigo-50" href="https://support.delhivery.com/?lang=kn" target="_blank" rel="noreferrer">ಬಳಕೆದಾರ ಮಾರ್ಗದರ್ಶಿ (Kannada)</a>
+                        <a class="guide-pill px-3 py-1.5 text-xs font-semibold text-indigo-700 rounded-full border border-indigo-100 hover:bg-indigo-50" href="https://support.delhivery.com/?lang=ta" target="_blank" rel="noreferrer">பயனர் வழிகாட்டி (Tamil)</a>
+                    </div>
+                </div>
+                <div class="mt-3 text-sm text-slate-600">
+                    <span class="font-semibold">Logic summary:</span> Upload → Filter → Map → Pick vehicles → Generate load → Assign fleet → Finalize &amp; export.
                 </div>
             </div>
 
@@ -538,6 +600,9 @@
             
             <div class="p-4 border-b border-slate-200 bg-slate-50">
                 <input type="text" id="fleetPickerSearch" class="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Search Vehicle No, Transporter, Type..." onkeyup="filterFleetPicker()">
+                <div class="text-[11px] text-slate-500 mt-2">
+                    New rule: A vehicle can serve multiple routes or a second run if utilization is under 100%. The card shows current utilization so you can decide fast.
+                </div>
             </div>
             
             <div class="flex-grow overflow-y-auto custom-scroll p-0">
@@ -619,8 +684,18 @@
         <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl bg-white rounded-xl shadow-2xl flex flex-col h-[80vh] animate-fadeIn">
             <div class="p-0 border-b border-slate-200 bg-slate-50 rounded-t-xl">
                 <div class="p-4 flex justify-between items-center">
-                    <h3 class="font-bold text-lg text-slate-800" id="viewerTitle">System Data View</h3>
+                    <h3 class="font-bold text-lg text-slate-800" id="viewerTitle">Datahub</h3>
                     <button onclick="closeDataViewer()"><i data-lucide="x" class="w-6 h-6 text-slate-400 hover:text-slate-600"></i></button>
+                </div>
+                <div class="px-4 pb-3 text-xs text-slate-500">
+                    <div class="font-semibold text-slate-600 mb-1">Datahub Guides (Multi‑Language)</div>
+                    <div class="flex flex-wrap gap-2">
+                        <a class="guide-pill px-2 py-1 rounded-full border border-slate-200 hover:bg-slate-100 text-slate-600" href="https://support.delhivery.com/?lang=en" target="_blank" rel="noreferrer">Guide EN</a>
+                        <a class="guide-pill px-2 py-1 rounded-full border border-slate-200 hover:bg-slate-100 text-slate-600" href="https://support.delhivery.com/?lang=hi" target="_blank" rel="noreferrer">हिन्दी</a>
+                        <a class="guide-pill px-2 py-1 rounded-full border border-slate-200 hover:bg-slate-100 text-slate-600" href="https://support.delhivery.com/?lang=kn" target="_blank" rel="noreferrer">ಕನ್ನಡ</a>
+                        <a class="guide-pill px-2 py-1 rounded-full border border-slate-200 hover:bg-slate-100 text-slate-600" href="https://support.delhivery.com/?lang=ta" target="_blank" rel="noreferrer">தமிழ்</a>
+                        <a class="guide-pill px-2 py-1 rounded-full border border-slate-200 hover:bg-slate-100 text-slate-600" href="https://support.delhivery.com/?lang=en#logic" target="_blank" rel="noreferrer">Logic Summary</a>
+                    </div>
                 </div>
                 <!-- Tabs -->
                 <div class="flex px-4 gap-2">
@@ -653,23 +728,36 @@
                     
                     <!-- CAPACITY METER -->
                     <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm mb-6">
-                         <div class="flex justify-between items-center mb-2">
-                             <span class="text-xs font-bold text-slate-500 uppercase">Load Utilization</span>
-                             <span class="text-sm font-bold text-slate-800" id="lamUtilText">0%</span>
-                         </div>
-                         <div class="w-full bg-slate-200 rounded-full h-3 mb-1 overflow-hidden relative">
-                             <!-- Markers for 100% -->
-                             <div class="absolute right-[16.6%] top-0 bottom-0 w-0.5 bg-white z-10" title="100% Capacity"></div>
-                             <div class="bg-green-500 h-3 rounded-full transition-all duration-300" id="lamUtilBar" style="width: 0%"></div>
-                         </div>
-                         
-                         <div class="flex justify-between text-[10px] text-slate-400 mt-1">
-                             <span>0 kg</span>
-                             <span>Max: <span id="lamMaxCap">0</span> kg</span>
-                         </div>
-                         <div id="lamOverloadMsg" class="hidden mt-2 p-2 bg-red-50 text-red-700 text-xs rounded border border-red-100 flex items-center gap-2">
-                             <i data-lucide="alert-triangle" class="w-3 h-3"></i> <span>Capacity Exceeded!</span>
-                         </div>
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <div class="text-[10px] text-slate-400 uppercase">Cost &amp; Optimization</div>
+                                <div class="text-xs text-slate-600">Current Load</div>
+                                <div class="text-lg font-bold text-slate-800" id="lamCurLoad">0 kg</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[10px] text-slate-400 uppercase">Proj. CPK</div>
+                                <div class="text-2xl font-bold text-indigo-600" id="lamCpk">0.00</div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-bold text-slate-500 uppercase">Load Utilization</span>
+                            <span class="text-sm font-bold text-slate-800" id="lamUtilText">0%</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-3 mb-1 overflow-hidden relative">
+                            <!-- Markers for 100% -->
+                            <div class="absolute right-[33.3%] top-0 bottom-0 w-0.5 bg-white z-10" title="100% Ideal"></div>
+                            <div class="bg-green-500 h-3 rounded-full transition-all duration-300" id="lamUtilBar" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between text-[10px] text-slate-400 mt-1">
+                            <span>0 kg</span>
+                            <span>Max: <span id="lamMaxCap">0</span> kg</span>
+                        </div>
+                        <div class="mt-2 text-[10px] text-slate-500">
+                            100% is ideal • Max allowed is 150%. Beyond 150%, you must plan another run or another vehicle.
+                        </div>
+                        <div id="lamOverloadMsg" class="hidden mt-2 p-2 bg-red-50 text-red-700 text-xs rounded border border-red-100 flex items-center gap-2">
+                            <i data-lucide="alert-triangle" class="w-3 h-3"></i> <span>Capacity Exceeded!</span>
+                        </div>
                     </div>
 
                     <!-- SMART LOAD GROUPS -->
@@ -694,13 +782,7 @@
                         </div>
                     </div>
 
-                    <!-- METRICS -->
-                    <div class="mt-4 pt-4 border-t border-slate-200">
-                        <div class="flex justify-between items-end">
-                            <div><div class="text-[10px] text-slate-400 uppercase">Current Load</div><div class="text-lg font-bold text-slate-800" id="lamCurLoad">0 kg</div></div>
-                            <div class="text-right"><div class="text-[10px] text-slate-400 uppercase">Proj. CPK</div><div class="text-2xl font-bold text-indigo-600" id="lamCpk">0.00</div></div>
-                        </div>
-                    </div>
+                    <!-- METRICS moved above Load Utilization for clarity -->
                 </div>
 
                 <!-- RIGHT: INDIVIDUAL LIST -->
@@ -769,7 +851,10 @@
                 </table>
             </div>
             
-             <div class="p-4 border-t border-slate-200 bg-slate-50 rounded-b-xl text-right">
+             <div class="p-4 border-t border-slate-200 bg-slate-50 rounded-b-xl flex justify-between items-center">
+                <button onclick="downloadExcludedCsv()" class="px-4 py-2 bg-amber-100 text-amber-800 border border-amber-200 rounded-lg font-bold text-xs hover:bg-amber-200 flex items-center gap-2">
+                    <i data-lucide="download" class="w-4 h-4"></i> Download Excluded CSV
+                </button>
                 <button onclick="closeExclusionModal()" class="px-6 py-2 bg-slate-800 text-white rounded-lg font-bold text-sm hover:bg-slate-700">Close</button>
             </div>
         </div>
@@ -778,7 +863,80 @@
     <!-- Other Modals (Validation, Paste, Plan Confirm, Unassigned) -->
     <div id="vehicleValidationModal" class="fixed inset-0 z-[65] hidden"><div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div><div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-xl shadow-2xl p-0 animate-fadeIn overflow-hidden"><div class="bg-indigo-600 p-4 text-white flex items-center justify-between"><h3 class="font-bold text-lg flex items-center gap-2"><i data-lucide="clipboard-check" class="w-5 h-5"></i> Input Confirmation</h3></div><div class="p-6"><p class="text-sm text-slate-600 mb-4">You pasted <strong id="valTotal" class="text-slate-900">0</strong> vehicle numbers.</p><div class="space-y-3 mb-6"><div class="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200"><span class="font-medium text-slate-700">Valid</span><span class="font-bold text-green-700 text-lg" id="valValid">0</span></div><div class="flex flex-col p-3 bg-red-50 rounded-lg border border-red-200"><div class="flex justify-between items-center"><span class="font-medium text-slate-700">Invalid</span><span class="font-bold text-red-700 text-lg" id="valInvalid">0</span></div><div id="valInvalidList" class="mt-2 text-xs text-red-600 font-mono hidden border-t border-red-200 pt-2"></div></div></div><div class="flex gap-3"><button onclick="closeValidationModal()" class="flex-1 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50">Back</button><button onclick="applyPastedSelection()" class="flex-1 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700">Proceed</button></div></div></div></div>
     <div id="pasteVehicleModal" class="fixed inset-0 z-[65] hidden"><div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div><div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white rounded-xl shadow-2xl p-0 animate-fadeIn overflow-hidden"><div class="bg-slate-800 p-4 text-white flex justify-between items-center"><h3 class="font-bold text-lg flex items-center gap-2"><i data-lucide="clipboard" class="w-5 h-5"></i> Paste List</h3><button onclick="closePasteModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button></div><div class="p-6"><textarea id="vehiclePasteArea" class="w-full h-48 border border-slate-300 rounded-lg p-3 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none resize-none bg-slate-50" placeholder="KA51..."></textarea><div class="flex justify-end mt-4"><button onclick="processPasteInput()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-bold shadow transition-colors">Validate</button></div></div></div></div>
-    <div id="planConfirmationModal" class="fixed inset-0 z-[75] hidden"><div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div><div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white rounded-xl shadow-2xl p-6 text-center animate-fadeIn"><div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="calendar-check" class="w-6 h-6"></i></div><h3 class="font-bold text-lg text-slate-900 mb-2">Confirm Date</h3><div class="mb-4 text-left"><label class="block text-xs font-bold text-slate-600 mb-1">Dispatch Date</label><input type="date" id="confirmDateInput" class="w-full border border-slate-300 rounded-lg p-2 text-sm"></div><div class="flex gap-3"><button onclick="closePlanConfirmation()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-lg font-medium hover:bg-slate-200">Cancel</button><button onclick="finalizePlanGeneration()" class="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">Generate Plan</button></div></div></div>
+    <div id="planConfirmationModal" class="fixed inset-0 z-[75] hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl bg-white rounded-2xl shadow-2xl p-8 animate-fadeIn">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
+                        <i data-lucide="calendar-check" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-xl text-slate-900">Confirm Dispatch Plan</h3>
+                        <p class="text-sm text-slate-500">Review summary, tick confirmations, then generate the plan.</p>
+                    </div>
+                </div>
+                <button onclick="closePlanConfirmation()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-4">
+                <div class="md:col-span-1 bg-slate-50 border border-slate-200 rounded-xl p-4">
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Dispatch Date</label>
+                    <input type="date" id="confirmDateInput" class="w-full border border-slate-300 rounded-lg p-2 text-sm" onchange="updateConfirmSummary()">
+                    <div class="mt-3 text-xs text-slate-500">
+                        <span class="font-semibold text-slate-700">You are generating dispatch plan for:</span>
+                        <div id="confirmDispatchDateLabel" class="text-indigo-600 font-bold mt-1">--</div>
+                    </div>
+                </div>
+                <div class="md:col-span-2 bg-white border border-slate-200 rounded-xl p-4">
+                    <div class="text-sm text-slate-700 font-semibold mb-3">Selections Summary</div>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                            <div>
+                                <div class="text-xs uppercase text-emerald-700 font-bold">AVTD on Floor</div>
+                                <div class="text-sm text-slate-700"><span id="confirmPendingCount">0</span> MWNs <span class="text-slate-400">(<span id="confirmPendingWt">0</span> Kg)</span></div>
+                            </div>
+                            <div class="text-xs text-emerald-700 font-semibold">Ready to plan</div>
+                        </div>
+                        <div class="flex flex-col gap-2 bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="text-xs uppercase text-indigo-700 font-bold">Expected / Arrived Vehicles</div>
+                                    <div class="text-sm text-slate-700">
+                                        <span id="confirmTransitVehicles">0</span> vehicles (<span id="confirmTransitCount">0</span> MWNs onboard of <span id="confirmTransitWt">0</span> Kg)
+                                    </div>
+                                </div>
+                                <button onclick="downloadExpectedArrivedCsv()" class="glow-button px-3 py-1.5 bg-indigo-600 text-white rounded-full text-xs font-bold flex items-center gap-1">
+                                    <i data-lucide="sparkles" class="w-3 h-3"></i> Download CSV
+                                </button>
+                            </div>
+                            <div class="text-xs text-indigo-700">Tip: This can be flashed to Hub team for priority unloading &amp; handover.</div>
+                        </div>
+                        <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                            <div class="text-xs uppercase text-slate-500 font-bold">Total Planned MWNs (LRs) for Dispatch Date</div>
+                            <div class="text-sm text-slate-700 font-semibold">Total MWNs (LRs): <span id="confirmTotalCount">0</span> <span class="text-slate-400">(<span id="confirmTotalWt">0</span> Kg)</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-5 bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-600 space-y-3">
+                <label class="flex items-start gap-3">
+                    <input type="checkbox" id="confirmDownloadCheckbox" class="custom-checkbox rounded w-4 h-4 mt-0.5" onchange="updateConfirmButtonState()">
+                    <span>Please confirm you have already downloaded <span class="font-semibold">Expected/Arrived Vehicles and their LM load</span> to intimate Hub.</span>
+                </label>
+                <label class="flex items-start gap-3">
+                    <input type="checkbox" id="confirmProceedCheckbox" class="custom-checkbox rounded w-4 h-4 mt-0.5" onchange="updateConfirmButtonState()">
+                    <span>Please confirm that you would like to proceed with your selected load dispatch planning.</span>
+                </label>
+            </div>
+
+            <div class="mt-5 flex flex-col md:flex-row gap-3">
+                <button onclick="closePlanConfirmation()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-lg font-medium hover:bg-slate-200">Cancel</button>
+                <button id="confirmGenerateBtn" onclick="finalizePlanGeneration()" class="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed" disabled>Generate Plan</button>
+            </div>
+        </div>
+    </div>
     <div id="unassignedPromptModal" class="fixed inset-0 z-[80] hidden"><div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div><div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white rounded-xl shadow-2xl p-6 text-center animate-fadeIn"><div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="help-circle" class="w-6 h-6"></i></div><h3 class="font-bold text-lg text-slate-900 mb-2">Unassigned Shipments</h3><p class="text-sm text-slate-600 mb-6"><strong id="unassignedCountDisplay">0</strong> shipments do not have a route assigned.</p><div class="flex gap-3"><button onclick="proceedToDashboard()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-lg font-medium hover:bg-slate-200">No, Skip</button><button onclick="openUnassignedManager()" class="flex-1 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700">Yes, Assign</button></div></div></div>
     <div id="assignmentManagerModal" class="fixed inset-0 z-[85] hidden"><div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div><div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl bg-white rounded-xl shadow-2xl flex flex-col h-[85vh] animate-fadeIn"><div class="p-6 border-b border-slate-100 flex justify-between items-center"><h3 class="font-bold text-xl text-slate-800">Assign Routes</h3><button onclick="closeAssignmentManager()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-6 h-6"></i></button></div><div class="flex-grow overflow-hidden flex flex-col md:flex-row"><div class="flex-grow overflow-y-auto custom-scroll p-0 relative"><table class="w-full text-sm text-left"><thead class="bg-slate-50 text-xs uppercase text-slate-500 sticky top-0 z-10 shadow-sm"><tr><th class="p-4 w-10"><input type="checkbox" id="selectAllUnassigned" class="custom-checkbox rounded"></th><th class="p-4">Waybill</th><th class="p-4">Pin Code</th><th class="p-4 text-right">Details</th></tr></thead><tbody id="unassignedTableBody" class="divide-y divide-slate-100"></tbody></table></div></div><div class="p-4 border-t border-slate-200 bg-slate-50 rounded-b-xl flex flex-col md:flex-row gap-4 items-center justify-between"><div class="text-sm text-slate-500 font-medium"><span id="selectedCountDisplay">0</span> items selected</div><div class="flex items-center gap-3 w-full md:w-auto"><select id="routeSelect" class="border border-slate-300 rounded-lg p-2.5 text-sm w-full md:w-64 focus:ring-2 focus:ring-indigo-500 outline-none" onchange="checkNewRouteOption()"></select><input type="text" id="newRouteInput" class="hidden border border-slate-300 rounded-lg p-2.5 text-sm w-48 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Enter Route Name"><button onclick="applyManualAssignment()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-medium shadow-md transition-all active:scale-95 whitespace-nowrap">Assign Route</button></div></div></div></div>
 
@@ -839,6 +997,7 @@
         let GLOBAL_TRANSIT_DATA = []; 
         let GLOBAL_DISPLAY_DATA = [];
         let GLOBAL_EXCLUDED_DATA = []; // NEW
+        let GLOBAL_SELECTED_TRANSIT_DATA = [];
         let GLOBAL_PIN_MAP = {}; 
         let GLOBAL_DETECTED_ROUTES = new Set();
         let VEHICLE_STANDARDS = [];
@@ -871,6 +1030,7 @@
             document.querySelectorAll('.unassigned-checkbox').forEach(cb => cb.checked = e.target.checked);
             updateSelectedCount();
         });
+        document.getElementById('lamBulkGroups').addEventListener('click', handleSmartGroupClick);
 
         // --- DATA FETCHING (Robust) ---
         async function fetchCsv(url) {
@@ -1104,6 +1264,7 @@
             GLOBAL_PENDING_DATA = []; 
             GLOBAL_TRANSIT_DATA = []; 
             GLOBAL_EXCLUDED_DATA = []; // Reset excluded
+            GLOBAL_SELECTED_TRANSIT_DATA = [];
             let uniquePins = new Set();
             
             data.forEach(row => {
@@ -1177,6 +1338,32 @@
         }
         function closeExclusionModal() { document.getElementById('exclusionModal').classList.add('hidden'); }
 
+        function downloadExcludedCsv() {
+            if(GLOBAL_EXCLUDED_DATA.length === 0) {
+                showToast("No excluded shipments to download.");
+                return;
+            }
+            const csv = Papa.unparse(GLOBAL_EXCLUDED_DATA);
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `Excluded_Shipments_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+        }
+
+        function downloadExpectedArrivedCsv() {
+            if(GLOBAL_SELECTED_TRANSIT_DATA.length === 0) {
+                showToast("No expected/arrived vehicles selected yet.");
+                return;
+            }
+            const csv = Papa.unparse(GLOBAL_SELECTED_TRANSIT_DATA);
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `Expected_Arrived_Vehicles_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+        }
+
 
         // --- STEP 3: MAPPING ---
         function checkRouteMapping() {
@@ -1221,7 +1408,7 @@
                             <td class="p-2 font-mono">${pin}</td>
                             <td class="p-2 text-xs text-slate-400" id="loc-${pin}">Auto-Detecting...</td> 
                             <td class="p-2 text-right cursor-pointer text-blue-600 hover:underline" onclick="openUnmappedDetails('${pin}')">
-                                ${stats.count} pkts <span class="text-slate-400">(${stats.wt.toFixed(0)}kg)</span>
+                                ${stats.count} MWNs <span class="text-slate-400">(${stats.wt.toFixed(0)}kg)</span>
                             </td>
                             <td class="p-2"><select class="manual-map-select border rounded p-1 w-full text-sm" data-pin="${pin}">${opts}</select></td>
                         </tr>`;
@@ -1380,17 +1567,62 @@
             boxes.forEach(box => { if(validList.includes(box.value)) box.checked = true; });
             updateVehicleSelectionCount(); closeValidationModal();
         }
+        function getSelectedTransitData() {
+            const selectedVehicles = new Set(Array.from(document.querySelectorAll('.vehicle-checkbox:checked')).map(cb => cb.value));
+            const selectedTransitData = [];
+            selectedVehicles.forEach(vNum => { if(GLOBAL_VEHICLE_MAP[vNum]) selectedTransitData.push(...GLOBAL_VEHICLE_MAP[vNum].items); });
+            return { selectedVehicles, selectedTransitData };
+        }
+
+        function updateConfirmSummary() {
+            const dateInput = document.getElementById('confirmDateInput');
+            const label = document.getElementById('confirmDispatchDateLabel');
+            if(!dateInput || !label) return;
+            if(dateInput.value) {
+                const d = new Date(dateInput.value);
+                label.textContent = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+            } else {
+                label.textContent = '--';
+            }
+        }
+
+        function updateConfirmButtonState() {
+            const downloadOk = document.getElementById('confirmDownloadCheckbox')?.checked;
+            const proceedOk = document.getElementById('confirmProceedCheckbox')?.checked;
+            const btn = document.getElementById('confirmGenerateBtn');
+            if(btn) btn.disabled = !(downloadOk && proceedOk);
+        }
+
         function confirmPlanGeneration() {
-            const selectedBoxes = Array.from(document.querySelectorAll('.vehicle-checkbox:checked'));
-            let totalWt = 0;
-            selectedBoxes.forEach(box => { const v = GLOBAL_VEHICLE_MAP[box.value]; if(v) totalWt += v.weight; });
-            if(selectedBoxes.length === 0 && GLOBAL_PENDING_DATA.length === 0) {
+            const { selectedVehicles, selectedTransitData } = getSelectedTransitData();
+            if(selectedVehicles.size === 0 && GLOBAL_PENDING_DATA.length === 0) {
                 showToast("No load data available. Upload a ZIP or select incoming vehicles.");
                 return;
             }
-            safeSetText('confVehCount', selectedBoxes.length); safeSetText('confTotalWt', totalWt.toLocaleString(undefined, {maximumFractionDigits:1}) + " Kg");
+
+            GLOBAL_SELECTED_TRANSIT_DATA = selectedTransitData;
+            const pendingWt = GLOBAL_PENDING_DATA.reduce((s, r) => s + (parseFloat(r.int_wt_iwt) || 0), 0);
+            const transitWt = selectedTransitData.reduce((s, r) => s + (parseFloat(r.int_wt_iwt) || 0), 0);
+            const totalCount = GLOBAL_PENDING_DATA.length + selectedTransitData.length;
+            const totalWt = pendingWt + transitWt;
+
+            safeSetText('confirmPendingCount', GLOBAL_PENDING_DATA.length);
+            safeSetText('confirmPendingWt', pendingWt.toFixed(0));
+            safeSetText('confirmTransitVehicles', selectedVehicles.size);
+            safeSetText('confirmTransitCount', selectedTransitData.length);
+            safeSetText('confirmTransitWt', transitWt.toFixed(0));
+            safeSetText('confirmTotalCount', totalCount);
+            safeSetText('confirmTotalWt', totalWt.toFixed(0));
+
             const tmrw = new Date(); tmrw.setDate(tmrw.getDate() + 1);
-            const dateInput = document.getElementById('confirmDateInput'); if(dateInput) dateInput.valueAsDate = tmrw;
+            const dateInput = document.getElementById('confirmDateInput');
+            if(dateInput) dateInput.valueAsDate = tmrw;
+            updateConfirmSummary();
+            const downloadCheckbox = document.getElementById('confirmDownloadCheckbox');
+            const proceedCheckbox = document.getElementById('confirmProceedCheckbox');
+            if(downloadCheckbox) downloadCheckbox.checked = false;
+            if(proceedCheckbox) proceedCheckbox.checked = false;
+            updateConfirmButtonState();
             document.getElementById('planConfirmationModal').classList.remove('hidden');
         }
         function closePlanConfirmation() { document.getElementById('planConfirmationModal').classList.add('hidden'); }
@@ -1404,9 +1636,8 @@
             }
             window.WEATHER_API_DATE = apiDate; closePlanConfirmation();
             
-            const selectedVehicles = new Set(Array.from(document.querySelectorAll('.vehicle-checkbox:checked')).map(cb => cb.value));
-            const selectedTransitData = [];
-            selectedVehicles.forEach(vNum => { if(GLOBAL_VEHICLE_MAP[vNum]) selectedTransitData.push(...GLOBAL_VEHICLE_MAP[vNum].items); });
+            const { selectedVehicles, selectedTransitData } = getSelectedTransitData();
+            GLOBAL_SELECTED_TRANSIT_DATA = selectedTransitData;
             GLOBAL_DISPLAY_DATA = [...GLOBAL_PENDING_DATA, ...selectedTransitData];
             if(GLOBAL_DISPLAY_DATA.length === 0) {
                 showToast("No load data found after filters. Check your upload or vehicle selection.");
@@ -1499,52 +1730,88 @@
         // --- DYNAMIC RECOMMENDATION LOGIC ---
         function getRecommendation(totalWt) {
             if(totalWt <= 0) return "-";
-            
-            // Sort standard types by weight capacity (descending)
-            const uniqueTypes = new Map();
-            VEHICLE_STANDARDS.forEach(v => {
-                if(!uniqueTypes.has(v.type) || uniqueTypes.get(v.type).wt < v.wt) {
-                    uniqueTypes.set(v.type, v);
+
+            const fleetCounts = {};
+            FLEET_MASTER.forEach(v => {
+                const size = (v.size || '').trim();
+                if(!size) return;
+                fleetCounts[size] = (fleetCounts[size] || 0) + 1;
+            });
+
+            let fleetTypes = Object.entries(fleetCounts)
+                .map(([size, count]) => ({ size, count, cap: getVehicleCapacity(size) }))
+                .filter(v => v.cap > 0);
+
+            if(fleetTypes.length === 0) {
+                // Fallback to standards if fleet sizes are missing
+                const uniqueTypes = new Map();
+                VEHICLE_STANDARDS.forEach(v => {
+                    if(!uniqueTypes.has(v.type) || uniqueTypes.get(v.type).wt < v.wt) {
+                        uniqueTypes.set(v.type, v);
+                    }
+                });
+                fleetTypes = Array.from(uniqueTypes.values()).map(v => ({ size: v.type, count: 99, cap: v.wt }));
+            }
+
+            fleetTypes.sort((a,b) => b.cap - a.cap);
+            let remaining = totalWt;
+            const recs = [];
+
+            fleetTypes.forEach(v => {
+                if(remaining <= 0) return;
+                const maxNeeded = Math.floor(remaining / v.cap);
+                const use = Math.min(maxNeeded, v.count);
+                if(use > 0) {
+                    recs.push(`${use}x ${v.size}`);
+                    remaining -= use * v.cap;
                 }
             });
-            const sortedTypes = Array.from(uniqueTypes.values()).sort((a,b) => b.wt - a.wt);
-            
-            if(sortedTypes.length === 0) return "Check Stds";
 
-            const counts = {};
-            let remaining = totalWt;
-            
-            // 1. Find largest capacity vehicle
-            const maxV = sortedTypes[0];
+            if(remaining > 0) {
+                const smallest = [...fleetTypes].sort((a,b) => a.cap - b.cap)[0];
+                if(smallest) {
+                    const extra = Math.ceil(remaining / smallest.cap);
+                    recs.push(`+${extra}x ${smallest.size}`);
+                }
+            }
 
-            // 2. Fill with max capacity vehicle if load is huge
-            if (remaining > maxV.wt) {
-                const fullLoads = Math.floor(remaining / maxV.wt);
-                counts[maxV.type] = fullLoads;
-                remaining -= fullLoads * maxV.wt;
-            }
-            
-            // 3. Fit remainder into smallest vehicle that can take it
-            if (remaining > 0) {
-                const ascending = [...sortedTypes].reverse();
-                let fit = ascending.find(v => v.wt >= remaining);
-                if (!fit) fit = maxV; 
-                counts[fit.type] = (counts[fit.type] || 0) + 1;
-            }
-            
-            return Object.entries(counts).map(([k,v]) => `${v}x ${k}`).join(' + ');
+            return recs.join(' + ');
         }
 
         // --- HELPERS ---
         function getFleetStatus() {
-            const status = {}; // vNo -> { route, count }
+            const status = {}; // vNo -> { routes:Set, count }
             Object.keys(DISPATCH_PLAN).forEach(r => {
                 DISPATCH_PLAN[r].forEach(a => {
-                    if(!status[a.vNo]) status[a.vNo] = { route: r, count: 0 };
+                    if(!status[a.vNo]) status[a.vNo] = { routes: new Set(), count: 0 };
+                    status[a.vNo].routes.add(r);
                     status[a.vNo].count++;
                 });
             });
             return status;
+        }
+
+        function getVehicleAssignedLoad(vNo) {
+            let load = 0;
+            Object.values(DISPATCH_PLAN).forEach(arr => {
+                arr.forEach(v => {
+                    if(v.vNo === vNo) {
+                        v.load.forEach(id => {
+                            const item = GLOBAL_DISPLAY_DATA.find(r => r.Master_waybill == id);
+                            if(item) load += parseFloat(item.int_wt_iwt) || 0;
+                        });
+                    }
+                });
+            });
+            return load;
+        }
+
+        function getVehicleRunCount(vNo) {
+            let runs = 0;
+            Object.values(DISPATCH_PLAN).forEach(arr => {
+                arr.forEach(v => { if(v.vNo === vNo) runs++; });
+            });
+            return runs;
         }
 
         // --- FLEET PICKER ---
@@ -1583,25 +1850,34 @@
                 
                 const s = statusMap[v.no];
                 let actionBtn = '';
-                let rowClass = '';
+                const assignedLoad = getVehicleAssignedLoad(v.no);
+                const cap = getVehicleCapacity(v.size) || 1;
+                const util = (assignedLoad / cap) * 100;
+                const utilText = assignedLoad > 0 ? `${util.toFixed(0)}% used` : '0% used';
+                const utilColor = util >= 100 ? 'text-red-600' : util >= 80 ? 'text-amber-600' : 'text-emerald-600';
+                const canMultiRoute = util < 100;
 
                 if (s) {
-                    if (s.route === CURRENT_ROUTE_TARGET) {
-                        // Allow 2nd run
+                    const routesList = Array.from(s.routes).join(', ');
+                    if (s.routes.has(CURRENT_ROUTE_TARGET)) {
                         actionBtn = `<button onclick="selectVehicleForRoute('${v.no}')" class="bg-green-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-green-700 active:scale-95 transition-transform flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i> Add Run ${s.count + 1}</button>`;
+                    } else if (canMultiRoute) {
+                        actionBtn = `<button onclick="selectVehicleForRoute('${v.no}')" class="bg-indigo-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-indigo-700 active:scale-95 transition-transform">Add to Route</button>`;
                     } else {
-                        // Disabled
-                        actionBtn = `<span class="text-[10px] font-bold text-red-400 border border-red-200 bg-red-50 px-2 py-1 rounded">Planned: ${s.route}</span>`;
+                        actionBtn = `<span class="text-[10px] font-bold text-red-400 border border-red-200 bg-red-50 px-2 py-1 rounded">At 100% on ${routesList}</span>`;
                         tr.classList.add('bg-slate-50', 'opacity-60');
                     }
                 } else {
-                    // Available
                     actionBtn = `<button onclick="selectVehicleForRoute('${v.no}')" class="bg-indigo-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-indigo-700 active:scale-95 transition-transform">Select</button>`;
                 }
 
                 tr.innerHTML = `
                     <td class="px-6 py-3">
                         <div class="font-bold text-slate-700">${v.no}</div>
+                        <div class="text-[10px] ${utilColor} font-semibold">${utilText}</div>
+                        <div class="w-full bg-slate-100 h-1.5 rounded-full mt-1">
+                            <div class="h-1.5 rounded-full ${util >= 100 ? 'bg-red-500' : 'bg-emerald-500'}" style="width: ${Math.min(util, 100)}%"></div>
+                        </div>
                     </td>
                     <td class="px-6 py-3 text-slate-600">
                         ${v.type} <span class="text-xs text-slate-400">(${v.size})</span>
@@ -1633,6 +1909,7 @@
              tbody.innerHTML = '';
              
              const routeStats = {};
+             const totalStats = { B2C:{c:0,w:0}, B2B:{c:0,w:0}, Heavy:{c:0,w:0}, Total:{c:0,w:0} };
              GLOBAL_DISPLAY_DATA.forEach(r => {
                 const rt = r['mapped_route'];
                 if(rt === 'NA' || rt === 'Unassigned') return;
@@ -1649,6 +1926,11 @@
                 routeStats[rt][cat].w += wt;
                 routeStats[rt].Total.c++;
                 routeStats[rt].Total.w += wt;
+
+                totalStats[cat].c++;
+                totalStats[cat].w += wt;
+                totalStats.Total.c++;
+                totalStats.Total.w += wt;
              });
 
              Object.keys(routeStats).sort().forEach(rt => {
@@ -1676,7 +1958,7 @@
                 tr.innerHTML = `
                     <td class="p-4 border-r border-slate-200 font-bold text-slate-800">
                         ${rt}
-                        <div class="text-[10px] font-normal text-blue-600 mt-1 bg-blue-50 inline-block px-1.5 py-0.5 rounded">Rec: ${rec}</div>
+                        <div class="text-[10px] font-normal text-slate-500 mt-1">Fleet‑based rec: ${rec}</div>
                     </td>
                     <td class="p-2 text-center text-xs text-blue-700 font-bold stat-cell" onclick="openRouteStatsDetails('${rt}', 'B2C')">${s.B2C.c}</td>
                     <td class="p-2 text-center text-xs text-slate-500 border-r border-slate-200 stat-cell" onclick="openRouteStatsDetails('${rt}', 'B2C')">${s.B2C.w.toFixed(0)}</td>
@@ -1698,6 +1980,23 @@
                 `;
                 tbody.appendChild(tr);
              });
+             if(Object.keys(routeStats).length > 0) {
+                const totalRow = document.createElement('tr');
+                totalRow.className = "bg-slate-900 text-white font-bold";
+                totalRow.innerHTML = `
+                    <td class="p-4 border-r border-slate-700">All Routes Total</td>
+                    <td class="p-2 text-center">${totalStats.B2C.c}</td>
+                    <td class="p-2 text-center border-r border-slate-700">${totalStats.B2C.w.toFixed(0)}</td>
+                    <td class="p-2 text-center">${totalStats.B2B.c}</td>
+                    <td class="p-2 text-center border-r border-slate-700">${totalStats.B2B.w.toFixed(0)}</td>
+                    <td class="p-2 text-center">${totalStats.Heavy.c}</td>
+                    <td class="p-2 text-center border-r border-slate-700">${totalStats.Heavy.w.toFixed(0)}</td>
+                    <td class="p-2 text-center bg-slate-800">${totalStats.Total.c}</td>
+                    <td class="p-2 text-center bg-slate-800 border-r border-slate-700">${totalStats.Total.w.toFixed(0)}</td>
+                    <td class="p-2 text-xs text-slate-200">Grand totals across all routes</td>
+                `;
+                tbody.appendChild(totalRow);
+             }
              updateFleetStats();
              lucide.createIcons();
              updateAssignmentCoach();
@@ -2041,10 +2340,10 @@
                 // Check if all selected?
                 // Logic: Button toggles selection
                 container.innerHTML += `
-                    <div class="bg-white border border-slate-200 rounded p-2 flex items-center justify-between hover:bg-slate-50 cursor-pointer" onclick="toggleBulkGroup('${cat}', '${data.ids.join(',')}', '${groupId}')">
+                    <div class="bg-white border border-slate-200 rounded p-2 flex items-center justify-between hover:bg-slate-50 cursor-pointer smart-group-toggle" data-group="${groupId}" data-ids="${data.ids.join(',')}">
                         <div>
                             <div class="text-xs font-bold text-slate-700">${cat}</div>
-                            <div class="text-[10px] text-slate-500">${data.c} pkts • ${data.w.toFixed(0)}kg</div>
+                            <div class="text-[10px] text-slate-500">${data.c} MWNs • ${data.w.toFixed(0)}kg</div>
                         </div>
                         <button class="w-7 h-7 flex items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm" id="toggle-${groupId}" data-group="${groupId}" data-mode="add" data-ids="${data.ids.join(',')}">
                             ${getGroupToggleIcon(false)}
@@ -2067,12 +2366,12 @@
                     });
 
                 container.innerHTML += `
-                    <div class="bg-white border border-slate-200 rounded p-2 flex items-center justify-between hover:bg-slate-50 cursor-pointer" onclick="toggleBulkGroup('PIN', '${data.ids.join(',')}', '${groupId}')">
+                    <div class="bg-white border border-slate-200 rounded p-2 flex items-center justify-between hover:bg-slate-50 cursor-pointer smart-group-toggle" data-group="${groupId}" data-ids="${data.ids.join(',')}">
                         <div>
                             <div class="text-xs font-bold text-slate-700 flex items-center gap-1">
                                 ${pin} <span class="font-normal text-slate-400" id="loc-${pin}">...</span>
                             </div>
-                            <div class="text-[10px] text-slate-500">${data.count} pkts • ${data.wt.toFixed(0)}kg</div>
+                            <div class="text-[10px] text-slate-500">${data.count} MWNs • ${data.wt.toFixed(0)}kg</div>
                         </div>
                         <button class="w-7 h-7 flex items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm" id="toggle-${groupId}" data-group="${groupId}" data-mode="add" data-ids="${data.ids.join(',')}">
                             ${getGroupToggleIcon(false)}
@@ -2083,24 +2382,45 @@
             updateSmartGroupToggleStates();
         }
 
-        function toggleBulkGroup(type, idsStr, groupId) {
+        function toggleBulkGroup(idsStr, groupId) {
             const ids = idsStr.split(',');
             const checks = Array.from(document.querySelectorAll('.lam-check'));
-            
-            // Find target checkboxes (enabled only)
-            const targets = checks.filter(c => ids.includes(c.value) && !c.disabled); 
-            
+            const targets = checks.filter(c => ids.includes(c.value) && !c.disabled);
             if(targets.length === 0) return;
 
-            // Check if all targets are currently checked
             const allChecked = targets.every(c => c.checked);
-            
-            // Toggle
-            targets.forEach(c => {
-                c.checked = !allChecked; 
-            });
-            
+            const vehicle = DISPATCH_PLAN[CUR_MODAL.route][CUR_MODAL.idx];
+            const vData = FLEET_MASTER.find(f => f.no === vehicle.vNo);
+            const maxCap = getVehicleCapacity(vData?.size) || 1;
+            const maxLoadLimit = maxCap * 1.5;
+
+            if(allChecked) {
+                targets.forEach(c => { c.checked = false; });
+                updateLamStats();
+                return;
+            }
+
+            let currentWt = getLamCheckedWeight();
+            for(const c of targets) {
+                if(c.checked) continue;
+                const addWt = parseFloat(c.dataset.wt) || 0;
+                if(currentWt + addWt > maxLoadLimit) {
+                    showToast("Max 150% capacity reached. Plan another run or vehicle.");
+                    break;
+                }
+                c.checked = true;
+                currentWt += addWt;
+            }
             updateLamStats();
+        }
+
+        function handleSmartGroupClick(event) {
+            const card = event.target.closest('.smart-group-toggle');
+            if(!card) return;
+            const ids = card.dataset.ids || '';
+            const groupId = card.dataset.group || '';
+            if(!ids) return;
+            toggleBulkGroup(ids, groupId);
         }
 
         function updateSmartGroupToggleStates() {
@@ -2152,7 +2472,7 @@
                 const tr = document.createElement('tr');
                 tr.className = isTaken ? "bg-slate-50 opacity-50" : "hover:bg-indigo-50";
                 
-                let check = `<input type="checkbox" class="lam-check" value="${id}" data-wt="${item.int_wt_iwt}" data-cat="${item.pdt||'B2C'}" ${isMine?'checked':''} onchange="updateLamStats()">`;
+                let check = `<input type="checkbox" class="lam-check" value="${id}" data-wt="${item.int_wt_iwt}" data-cat="${item.pdt||'B2C'}" ${isMine?'checked':''} onchange="updateLamStats(event)">`;
                 if(isTaken) check = `<i data-lucide="lock" class="w-3 h-3 text-slate-400"></i>`;
                 
                 tr.innerHTML = `<td class="p-2">${check}</td><td class="p-2 font-mono">${id}</td><td class="p-2 truncate max-w-[100px]" title="${item.cl}">${item.cl||'-'}</td><td class="p-2">${item.pin}</td><td class="p-2 text-right">${parseFloat(item.int_wt_iwt).toFixed(1)}</td>`;
@@ -2173,7 +2493,14 @@
             renderLoadTable();
         }
 
-        function updateLamStats() {
+        function getLamCheckedWeight() {
+            const checks = document.querySelectorAll('.lam-check:checked');
+            let wt = 0;
+            checks.forEach(c => { wt += parseFloat(c.dataset.wt) || 0; });
+            return wt;
+        }
+
+        function updateLamStats(evt) {
             const checks = document.querySelectorAll('.lam-check:checked');
             let wt = 0;
             const newLoad = [];
@@ -2181,6 +2508,18 @@
                 wt += parseFloat(c.dataset.wt)||0;
                 newLoad.push(c.value);
             });
+
+            const vehicle = DISPATCH_PLAN[CUR_MODAL.route][CUR_MODAL.idx];
+            const vData = FLEET_MASTER.find(f => f.no === vehicle.vNo);
+            const maxCap = getVehicleCapacity(vData?.size) || 1;
+            const maxLoadLimit = maxCap * 1.5;
+
+            if(evt && evt.target && evt.target.checked && wt > maxLoadLimit) {
+                evt.target.checked = false;
+                showToast("Max 150% capacity reached. Plan another run or vehicle.");
+                return updateLamStats();
+            }
+
             DISPATCH_PLAN[CUR_MODAL.route][CUR_MODAL.idx].load = newLoad;
             safeSetText('lamCurLoad', `${wt.toFixed(1)} kg`);
             safeSetText('lamSelectionCount', `${newLoad.length} selected`);
@@ -2203,11 +2542,7 @@
                 safeSetText('usedHrsVal', hrs);
             }
             
-            let cost = vData.acpd;
-            if(isCarting) {
-                const contractHours = vData.hours || 12;
-                cost = (vehicle.usedHrs > 0) ? (vData.acpd * (vehicle.usedHrs / contractHours)) : 0;
-            }
+            const cost = vData.acpd;
             
             let wt = 0;
             vehicle.load.forEach(id => {
@@ -2241,7 +2576,7 @@
             
             safeSetText('lamUtilText', statusText);
             bar1.className = `h-3 rounded-full transition-all duration-300 ${barColor}`;
-            bar1.style.width = `${Math.min(util, 100)}%`;
+            bar1.style.width = `${Math.min(util, 150) / 150 * 100}%`;
 
             // Max Limit Logic (150%)
             const maxLoadLimit = singleCap * 1.5;
@@ -2256,7 +2591,8 @@
                 checks.forEach(c => c.disabled = false);
             }
 
-            const cpk = wt > 0 ? (cost/wt).toFixed(2) : '0.00';
+            const dailyLoad = getVehicleAssignedLoad(vehicle.vNo);
+            const cpk = dailyLoad > 0 ? (cost/dailyLoad).toFixed(2) : '0.00';
             safeSetText('lamCpk', cpk);
         }
 
@@ -2341,6 +2677,7 @@
             
             // Grand Totals (Counts)
             let grandStats = { availC:0, planC:0 };
+            const overallTotals = { b2cW:0, b2bW:0, heavyW:0, totalW:0, b2cC:0, b2bC:0, heavyC:0, totalC:0 };
 
             sortedRoutes.forEach(rt => {
                 // 1. Calculate Available (Floor) - Weights & Counts
@@ -2374,6 +2711,10 @@
 
                 grandStats.availC += avail.totalC;
                 grandStats.planC += plan.totalC;
+                overallTotals.b2cW += avail.b2cW; overallTotals.b2cC += avail.b2cC;
+                overallTotals.b2bW += avail.b2bW; overallTotals.b2bC += avail.b2bC;
+                overallTotals.heavyW += avail.heavyW; overallTotals.heavyC += avail.heavyC;
+                overallTotals.totalW += avail.totalW; overallTotals.totalC += avail.totalC;
 
                 // 3. Helper for AVTD Display using COUNTS
                 const getAvtdHtml = (pC, aC) => {
@@ -2412,20 +2753,18 @@
                 // CPK Table Population
                 vehicles.forEach(v => {
                     const vData = FLEET_MASTER.find(f => f.no === v.vNo) || { type:'-', size:'-', acpd:0 };
-                    let cost = vData.acpd;
-                    if((vData.type || '').toLowerCase() === 'carting') {
-                        const contractHours = vData.hours || 12;
-                        cost = (v.usedHrs / contractHours) * vData.acpd;
-                    }
+                    const cost = vData.acpd;
+                    const dailyLoad = getVehicleAssignedLoad(v.vNo);
+                    const runsCount = getVehicleRunCount(v.vNo);
                     
                     let load = 0; v.load.forEach(id => { const i = GLOBAL_DISPLAY_DATA.find(r => r.Master_waybill == id); if(i) load += parseFloat(i.int_wt_iwt)||0; });
-                    const cpk = load > 0 ? (cost/load).toFixed(2) : 0;
+                    const cpk = dailyLoad > 0 ? (cost/dailyLoad).toFixed(2) : 0;
                     
                     cpkBody.innerHTML += `<tr class="border-b border-slate-100">
                         <td class="p-2 font-bold text-slate-700">${v.vNo} ${v.runIndex>1?`<span class="text-[9px] bg-indigo-100 px-1 rounded text-indigo-600">Run ${v.runIndex}</span>`:''}</td>
                         <td class="p-2 text-slate-500">${rt}</td>
                         <td class="p-2 text-right">${load.toFixed(0)}</td>
-                        <td class="p-2 text-right">${vData.type}</td><td class="p-2 text-right">${v.usedHrs||'-'}</td>
+                        <td class="p-2 text-right">${vData.type}</td><td class="p-2 text-right">Runs ${runsCount}</td>
                         <td class="p-2 text-right">₹${cost.toFixed(0)}</td><td class="p-2 text-right font-bold ${cpk<2?'text-green-600':'text-red-600'}">${cpk}</td>
                     </tr>`;
                 });
@@ -2438,6 +2777,17 @@
             else if (grandAvtd >= 80) grandColor = 'text-amber-400';
 
             tfoot.innerHTML = `
+                <tr class="bg-slate-900 text-white">
+                    <td class="p-3 border-r border-slate-700">All Routes Total</td>
+                    <td class="p-2 text-center">${overallTotals.b2cC}</td>
+                    <td class="p-2 text-center border-r border-slate-700">${overallTotals.b2cW.toFixed(0)}</td>
+                    <td class="p-2 text-center">${overallTotals.b2bC}</td>
+                    <td class="p-2 text-center border-r border-slate-700">${overallTotals.b2bW.toFixed(0)}</td>
+                    <td class="p-2 text-center">${overallTotals.heavyC}</td>
+                    <td class="p-2 text-center border-r border-slate-700">${overallTotals.heavyW.toFixed(0)}</td>
+                    <td class="p-2 text-center bg-slate-800">${overallTotals.totalC}</td>
+                    <td class="p-2 text-center bg-slate-800">${overallTotals.totalW.toFixed(0)}</td>
+                </tr>
                 <tr>
                     <td colspan="7" class="p-3 text-right uppercase tracking-wider">Plan AVTD Estimate</td>
                     <td colspan="2" class="p-3 text-center bg-slate-700 text-lg ${grandColor}">
@@ -2536,15 +2886,10 @@
                 const vehicles = DISPATCH_PLAN[rt];
                 vehicles.forEach(v => {
                     const vData = FLEET_MASTER.find(f => f.no === v.vNo) || { transporter: '-', type: '-', size: '-', hours: 0, acpd: 0 };
-                    const isCarting = (vData.type || '').toLowerCase() === 'carting';
-                    let cost = vData.acpd;
-                    let hrsRunsStr = `Run ${v.runIndex}`;
-                    if(isCarting) {
-                        const contractHrs = vData.hours || 12;
-                        const used = v.usedHrs || 0;
-                        cost = (used > 0) ? (vData.acpd * (used/contractHrs)) : 0;
-                        hrsRunsStr = `${used}/${contractHrs} Hrs`;
-                    }
+                    const cost = vData.acpd;
+                    const dailyLoad = getVehicleAssignedLoad(v.vNo);
+                    const runsCount = getVehicleRunCount(v.vNo);
+                    const hrsRunsStr = `Runs ${runsCount}`;
                     
                     let vLoad = 0; 
                     let vCount = 0;
@@ -2563,12 +2908,12 @@
                                 "D_Route": rt,
                                 "D_Run/Hrs": hrsRunsStr,
                                 "D_Adj Cost": cost.toFixed(2),
-                                "D_Est CPK": (vLoad > 0 ? (cost/vLoad).toFixed(2) : 0)
+                                "D_Est CPK": (dailyLoad > 0 ? (cost/dailyLoad).toFixed(2) : 0)
                             };
                         }
                     });
                     
-                    const cpk = vLoad > 0 ? (cost/vLoad).toFixed(2) : 0;
+                    const cpk = dailyLoad > 0 ? (cost/dailyLoad).toFixed(2) : 0;
 
                     dispatchSummaryData.push({
                         "Vehicle No": v.vNo,
@@ -2592,14 +2937,21 @@
                     "D_Contract": "", "D_Route": "", "D_Run/Hrs": "", 
                     "D_Adj Cost": "", "D_Est CPK": ""
                 };
-                return { ...item, ...assign };
+                const adjusted = { ...item, ...assign };
+                if(adjusted.mcount === 0 || adjusted.mcount === '0') adjusted.mcount = 1;
+                if(adjusted['mcount cl'] === 0 || adjusted['mcount cl'] === '0') adjusted['mcount cl'] = 1;
+                return adjusted;
             });
+            const excludedData = GLOBAL_EXCLUDED_DATA.map(item => ({ ...item }));
+            const expectedArrivedData = GLOBAL_SELECTED_TRANSIT_DATA.map(item => ({ ...item }));
 
             // --- GENERATE EXCEL ---
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(loadSummaryData), "Load_Summary");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dispatchSummaryData), "Dispatch_Summary");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detailedData), "Detailed_Data");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excludedData), "Excluded");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(expectedArrivedData), "Expected_Arrived_Vehicle");
             
             XLSX.writeFile(wb, `Hubli_Dispatch_Plan_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
